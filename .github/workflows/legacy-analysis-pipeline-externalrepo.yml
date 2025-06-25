@@ -31,8 +31,7 @@ jobs:
 
       - name: Clone source repository
         run: |
-          echo "Cloning source repository URL:  https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ inputs.source_repo }}.git source-repo
-          mv source-repo/${{ inputs.source_path }}"
+          echo "Cloning source repository URL:  https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ inputs.source_repo }}.git"
           git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ inputs.source_repo }}.git source-repo
           mv source-repo/${{ inputs.source_path }} .
         env:
