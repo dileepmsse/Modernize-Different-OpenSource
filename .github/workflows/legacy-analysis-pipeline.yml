@@ -45,7 +45,7 @@ jobs:
           args: >
             -Dsonar.projectKey=${{ github.event.repository.name }}
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-            -Dsonar.sources=${{ inputs.source_path }}/src/main/java
+            -Dsonar.sources=PolicyManagementJSP/src/main/java
             -Dsonar.java.binaries=${{ inputs.source_path }}/target
 
       - name: Install Checkstyle
