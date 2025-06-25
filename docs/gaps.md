@@ -1,4 +1,4 @@
-# Gap Analysis
+# Gap Analysis trigger workflow
 
 Gap 1: No RESTful APIs
   Impact: Prevents integration with modern systems.
