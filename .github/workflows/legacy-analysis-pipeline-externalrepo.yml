@@ -31,6 +31,8 @@ jobs:
 
       - name: Clone source repository
         run: |
+          write-host "Cloning source repository:  https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ inputs.source_repo }}.git source-repo
+          mv source-repo/${{ inputs.source_path }}"
           git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ inputs.source_repo }}.git source-repo
           mv source-repo/${{ inputs.source_path }} .
         env:
