@@ -46,7 +46,7 @@ jobs:
             exit 1
           fi
           # Move source_path to workspace root
-          mv source-repo/${{ inputs.source_path }} .
+          # mv source-repo/${{ inputs.source_path }} .
           # Debug cloned contents
           ls -l ${{ inputs.source_path }}
         env:
