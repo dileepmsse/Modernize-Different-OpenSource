@@ -42,8 +42,8 @@
         <!-- Supabase Client -->
         <dependency>
             <groupId>io.supabase</groupId>
-            <artifactId>supabase-java</artifactId>
-            <version>0.1.0</version>
+            <artifactId>postgrest-java</artifactId>
+            <version>0.3.2</version>
         </dependency>
     </dependencies>
 
