@@ -119,8 +119,8 @@ jobs:
         run: |
           python scripts/generate_requirements.py \
             --source PolicyManagementJSP/src/main/java \
-            --entity ${{ inputs.entity_name }} \
-            --industry ${{ inputs.industry }} \
+            --entity Policy  \
+            --industry Insurance \
             --output docs/requirements.md
         env:
           HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
