@@ -46,13 +46,13 @@ jobs:
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
             -Dsonar.sources=PolicyManagementJSP/src/main/java
-            -Dsonar.java.binaries=${{ inputs.source_path }}/target
+            -Dsonar.java.binaries=PolicyManagementJSP/target
 
       - name: Install Checkstyle
         run: |
-          mvn install -DskipTests -f ${{ inputs.source_path }}/pom.xml
-          mvn checkstyle:check -f ${{ inputs.source_path }}/pom.xml
-          mv ${{ inputs.source_path }}/target/checkstyle-result.xml reports/checkstyle-report.xml
+          mvn install -DskipTests -f PolicyManagementJSP/pom.xml
+          mvn checkstyle:check -f PolicyManagementJSP/pom.xml
+          mv PolicyManagementJSP/target/checkstyle-result.xml reports/checkstyle-report.xml
 
       - name: Install Hugging Face dependencies
         run: |
@@ -60,7 +60,7 @@ jobs:
 
       - name: Run CodeBERT via Hugging Face Inference API
         run: |
-          python scripts/codebert_summary.py ${{ inputs.source_path }}/src/main/java
+          python scripts/codebert_summary.py PolicyManagementJSP/src/main/java
         env:
           HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
 
@@ -139,9 +139,9 @@ jobs:
       - name: Generate requirements with LangChain
         run: |
           python scripts/generate_requirements.py \
-            --source ${{ inputs.source_path }}/src/main/java \
-            --entity ${{ inputs.entity_name }} \
-            --industry ${{ inputs.industry }} \
+            --source PolicyManagementJSP/src/main/java \
+            --entity Policy \
+            --industry insurance \
             --output docs/requirements.md
         env:
           HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
@@ -155,7 +155,7 @@ jobs:
       - name: Generate system inventory
         run: |
           python scripts/generate_inventory.py \
-            --source ${{ inputs.source_path }} \
+            --source PolicyManagementJSP \
             --output docs/inventory.md
 
       - name: Commit documentation
