@@ -33,42 +33,14 @@
             <artifactId>jakarta.servlet.jsp.jstl</artifactId>
             <version>3.0.0</version>
         </dependency>
-        <!-- Supabase JDBC (PostgreSQL driver) -->
+        <!-- PostgreSQL JDBC Driver -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>42.7.3</version>
         </dependency>
-        <!-- Supabase Client -->
-        <!-- <dependency>
-            <groupId>io.supabase</groupId>
-            <artifactId>postgrest-java</artifactId>
-            <version>0.3.2</version>
-        </dependency>-->
-        <!-- https://mvnrepository.com/artifact/io.supabase/postgrest-kt -->
-        <dependency>
-            <groupId>io.github.jan-tennert.supabase</groupId>
-            <artifactId>supabase-kt-jvm</artifactId>
-            <version>3.2.0-ksp-b1</version>
-        </dependency>
-        <!-- JSON Processing -->
-        <dependency>
-            <groupId>org.glassfish</groupId>
-            <artifactId>javax.json</artifactId>
-            <version>1.1.4</version>
-        </dependency>
-        <!-- Logging -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>2.0.7</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>2.0.7</version>
-        </dependency>
     </dependencies>
+
     <build>
         <plugins>
             <plugin>
