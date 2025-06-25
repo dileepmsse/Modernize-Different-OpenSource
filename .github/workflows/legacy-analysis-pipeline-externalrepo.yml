@@ -5,8 +5,12 @@ on:
     branches: [ main ]
   workflow_dispatch:
     inputs:
+      source_repo:
+        description: 'Repository containing source code (e.g., <your-username>/PolicyManagementJSPRepo)'
+        required: true
+        default: 'dileepmsse/PolicyManagementJSPRepo'
       source_path:
-        description: 'Path to source code (e.g., PolicyManagementJSP)'
+        description: 'Path to source code in repo (e.g., PolicyManagementJSP)'
         required: true
         default: 'PolicyManagementJSP'
       entity_name:
@@ -22,8 +26,15 @@ jobs:
   static-analysis:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout evaluation repository
         uses: actions/checkout@v4
+
+      - name: Clone source repository
+        run: |
+          git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ inputs.source_repo }}.git source-repo
+          mv source-repo/${{ inputs.source_path }} .
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -36,113 +47,113 @@ jobs:
         with:
           python-version: '3.10'
 
-      # - name: Validate source path
-      #   run: |
-      #     if [ ! -d "PolicyManagementJSP/src/main/java" ]; then
-      #       echo "Error: Source path PolicyManagementJSP/src/main/java does not exist."
-      #       exit 1
-      #     fi
-      #     if [ ! -f "PolicyManagementJSP/pom.xml" ]; then
-      #       echo "Error: Maven POM file PolicyManagementJSP/pom.xml does not exist."
-      #       exit 1
-      #     fi
-
-      # - name: Build Maven
-      #   run: |
-      #     mvn clean install -DskipTests -X -f PolicyManagementJSP/pom.xml
-      #   continue-on-error: false
-
-      # - name: Debug target directory
-      #   run: |
-      #     ls -l PolicyManagementJSP/target || echo "Target directory not found"
-      #     find PolicyManagementJSP/target -type f || echo "No files in target"
-
-      # - name: Run SonarQube
-      #   uses: SonarSource/sonarqube-scan-action@v3
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      #   with:
-      #     args: >
-      #       -Dsonar.projectKey=Modernize-Different-OpenSource
-      #       -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-      #       -Dsonar.sources=PolicyManagementJSP/src/main/java
-      #       -Dsonar.java.binaries=PolicyManagementJSP/target/classes
-
-      # - name: Install Checkstyle
-      #   run: |
-      #     mvn checkstyle:check -f PolicyManagementJSP/pom.xml
-      #     mv PolicyManagementJSP/target/checkstyle-result.xml reports/checkstyle-report.xml
-
-      - name: Install Hugging Face dependencies
+      - name: Validate source path
         run: |
-          python -m pip install transformers requests
+          if [ ! -d "${{ inputs.source_path }}/src/main/java" ]; then
+            echo "Error: Source path ${{ inputs.source_path }}/src/main/java does not exist."
+            exit 1
+          fi
+          if [ ! -f "${{ inputs.source_path }}/pom.xml" ]; then
+            echo "Error: Maven POM file ${{ inputs.source_path }}/pom.xml does not exist."
+            exit 1
+          fi
 
-      - name: Run CodeBERT via Hugging Face Inference API
+      - name: Build Maven
         run: |
-          python scripts/codebert_summary.py PolicyManagementJSP/src/main/java
+          mvn clean install -DskipTests -X -f ${{ inputs.source_path }}/pom.xml
+        continue-on-error: false
+
+      - name: Debug target directory
+        run: |
+          ls -l ${{ inputs.source_path }}/target || echo "Target directory not found"
+          find ${{ inputs.source_path }}/target -type f || echo "No files in target"
+
+      - name: Run SonarQube
+        uses: SonarSource/sonarqube-scan-action@v3
         env:
-          HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
-
-      - name: Upload analysis reports
-        uses: actions/upload-artifact@v4
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
-          name: analysis-reports
-          path: |
-            reports/sonar-report.json
-            reports/checkstyle-report.xml
-            reports/codebert-summary.md
+          args: >
+            -Dsonar.projectKey=Modernize-Different-OpenSource
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.sources=${{ inputs.source_path }}/src/main/java
+            -Dsonar.java.binaries=${{ inputs.source_path }}/target/classes
 
-  documentation:
-    runs-on: ubuntu-latest
-    needs: [static-analysis]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install LangChain and Hugging Face dependencies
+      - name: Install Checkstyle
         run: |
-          python -m pip install langchain langchain-huggingface requests
+          mvn checkstyle:check -f ${{ inputs.source_path }}/pom.xml
+          mv ${{ inputs.source_path }}/target/checkstyle-result.xml reports/checkstyle-report.xml
 
-      - name: Download analysis artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: analysis-reports
-          path: reports/
+  #     - name: Install Hugging Face dependencies
+  #       run: |
+  #         python -m pip install transformers requests
 
-      - name: Generate requirements with LangChain
-        run: |
-          python scripts/generate_requirements.py \
-            --source PolicyManagementJSP/src/main/java \
-            --entity Policy  \
-            --industry Insurance \
-            --output docs/requirements.md
-        env:
-          HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+  #     - name: Run CodeBERT via Hugging Face Inference API
+  #       run: |
+  #         python scripts/codebert_summary.py ${{ inputs.source_path }}/src/main/java
+  #       env:
+  #         HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
 
-      - name: Generate gap analysis
-        run: |
-          python scripts/generate_gaps.py \
-            --analysis-reports reports/ \
-            --output docs/gaps.md
+  #     - name: Upload analysis reports
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: analysis-reports
+  #         path: |
+  #           reports/sonar-report.json
+  #           reports/checkstyle-report.xml
+  #           reports/codebert-summary.md
 
-      - name: Generate system inventory
-        run: |
-          python scripts/generate_inventory.py \
-            --source PolicyManagementJSP \
-            --output docs/inventory.md
+  # documentation:
+  #   runs-on: ubuntu-latest
+  #   needs: [static-analysis]
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Commit documentation
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add docs/
-          git commit -m "Add analysis and requirements documentation" || echo "No changes to commit"
-          git push origin main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.10'
+
+  #     - name: Install LangChain and Hugging Face dependencies
+  #       run: |
+  #         python -m pip install langchain langchain-huggingface requests
+
+  #     - name: Download analysis artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: analysis-reports
+  #         path: reports/
+
+  #     - name: Generate requirements with LangChain
+  #       run: |
+  #         python scripts/generate_requirements.py \
+  #           --source ${{ inputs.source_path }}/src/main/java \
+  #           --entity ${{ inputs.entity_name }} \
+  #           --industry ${{ inputs.industry }} \
+  #           --output docs/requirements.md
+  #       env:
+  #         HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+
+  #     - name: Generate gap analysis
+  #       run: |
+  #         python scripts/generate_gaps.py \
+  #           --analysis-reports reports/ \
+  #           --output docs/gaps.md
+
+  #     - name: Generate system inventory
+  #       run: |
+  #         python scripts/generate_inventory.py \
+  #           --source ${{ inputs.source_path }} \
+  #           --output docs/inventory.md
+
+  #     - name: Commit documentation
+  #       run: |
+  #         git config user.name "GitHub Actions"
+  #         git config user.email "actions@github.com"
+  #         git add docs/
+  #         git commit -m "Add analysis and requirements documentation" || echo "No changes to commit"
+  #         git push origin main
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
