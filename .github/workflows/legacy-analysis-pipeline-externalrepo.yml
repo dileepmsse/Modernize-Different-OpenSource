@@ -68,92 +68,92 @@ jobs:
           ls -l ${{ inputs.source_path }}/target || echo "Target directory not found"
           find ${{ inputs.source_path }}/target -type f || echo "No files in target"
 
-      # - name: Run SonarQube
-      #   uses: SonarSource/sonarqube-scan-action@v3
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      #   with:
-      #     args: >
-      #       -Dsonar.projectKey=Modernize-Different-OpenSource
-      #       -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-      #       -Dsonar.sources=${{ inputs.source_path }}/src/main/java
-      #       -Dsonar.java.binaries=${{ inputs.source_path }}/target/classes
+      - name: Run SonarQube
+        uses: SonarSource/sonarqube-scan-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.projectKey=Modernize-Different-OpenSource
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.sources=${{ inputs.source_path }}/src/main/java
+            -Dsonar.java.binaries=${{ inputs.source_path }}/target/classes
 
-      # - name: Install Checkstyle
-      #   run: |
-      #     mvn checkstyle:check -f ${{ inputs.source_path }}/pom.xml
-      #     mv ${{ inputs.source_path }}/target/checkstyle-result.xml reports/checkstyle-report.xml
+      - name: Install Checkstyle
+        run: |
+          mvn checkstyle:check -f ${{ inputs.source_path }}/pom.xml
+          mv ${{ inputs.source_path }}/target/checkstyle-result.xml reports/checkstyle-report.xml
 
-  #     - name: Install Hugging Face dependencies
-  #       run: |
-  #         python -m pip install transformers requests
+      - name: Install Hugging Face dependencies
+        run: |
+          python -m pip install transformers requests
 
-  #     - name: Run CodeBERT via Hugging Face Inference API
-  #       run: |
-  #         python scripts/codebert_summary.py ${{ inputs.source_path }}/src/main/java
-  #       env:
-  #         HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+      - name: Run CodeBERT via Hugging Face Inference API
+        run: |
+          python scripts/codebert_summary.py ${{ inputs.source_path }}/src/main/java
+        env:
+          HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
 
-  #     - name: Upload analysis reports
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: analysis-reports
-  #         path: |
-  #           reports/sonar-report.json
-  #           reports/checkstyle-report.xml
-  #           reports/codebert-summary.md
+      - name: Upload analysis reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis-reports
+          path: |
+            reports/sonar-report.json
+            reports/checkstyle-report.xml
+            reports/codebert-summary.md
 
-  # documentation:
-  #   runs-on: ubuntu-latest
-  #   needs: [static-analysis]
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
+  documentation:
+    runs-on: ubuntu-latest
+    needs: [static-analysis]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  #     - name: Set up Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-  #     - name: Install LangChain and Hugging Face dependencies
-  #       run: |
-  #         python -m pip install langchain langchain-huggingface requests
+      - name: Install LangChain and Hugging Face dependencies
+        run: |
+          python -m pip install langchain langchain-huggingface requests
 
-  #     - name: Download analysis artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: analysis-reports
-  #         path: reports/
+      - name: Download analysis artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: analysis-reports
+          path: reports/
 
-  #     - name: Generate requirements with LangChain
-  #       run: |
-  #         python scripts/generate_requirements.py \
-  #           --source ${{ inputs.source_path }}/src/main/java \
-  #           --entity ${{ inputs.entity_name }} \
-  #           --industry ${{ inputs.industry }} \
-  #           --output docs/requirements.md
-  #       env:
-  #         HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+      - name: Generate requirements with LangChain
+        run: |
+          python scripts/generate_requirements.py \
+            --source ${{ inputs.source_path }}/src/main/java \
+            --entity ${{ inputs.entity_name }} \
+            --industry ${{ inputs.industry }} \
+            --output docs/requirements.md
+        env:
+          HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
 
-  #     - name: Generate gap analysis
-  #       run: |
-  #         python scripts/generate_gaps.py \
-  #           --analysis-reports reports/ \
-  #           --output docs/gaps.md
+      - name: Generate gap analysis
+        run: |
+          python scripts/generate_gaps.py \
+            --analysis-reports reports/ \
+            --output docs/gaps.md
 
-  #     - name: Generate system inventory
-  #       run: |
-  #         python scripts/generate_inventory.py \
-  #           --source ${{ inputs.source_path }} \
-  #           --output docs/inventory.md
+      - name: Generate system inventory
+        run: |
+          python scripts/generate_inventory.py \
+            --source ${{ inputs.source_path }} \
+            --output docs/inventory.md
 
-  #     - name: Commit documentation
-  #       run: |
-  #         git config user.name "GitHub Actions"
-  #         git config user.email "actions@github.com"
-  #         git add docs/
-  #         git commit -m "Add analysis and requirements documentation" || echo "No changes to commit"
-  #         git push origin main
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit documentation
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add docs/
+          git commit -m "Add analysis and requirements documentation" || echo "No changes to commit"
+          git push origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
