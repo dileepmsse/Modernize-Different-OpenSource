@@ -31,8 +31,24 @@ jobs:
 
       - name: Clone source repository
         run: |
-          git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ inputs.source_repo }} source-repo
+         # Remove existing source_path to avoid conflicts
+          rm -rf ${{ inputs.source_path }}
+          # Clone with shallow depth
+          git clone --depth 1 https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/dileepmsse/PolicyManagementJSPRepo.git source-repo
+          # Check if clone succeeded
+          if [ ! -d "source-repo" ]; then
+            echo "Error: Failed to clone repository ${{ inputs.source_repo }}"
+            exit 1
+          fi
+          # Verify source_path exists in cloned repo
+          if [ ! -d "source-repo/${{ inputs.source_path }}" ]; then
+            echo "Error: Source path source-repo/${{ inputs.source_path }} does not exist"
+            exit 1
+          fi
+          # Move source_path to workspace root
           mv source-repo/${{ inputs.source_path }} .
+          # Debug cloned contents
+          ls -l ${{ inputs.source_path }}
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
