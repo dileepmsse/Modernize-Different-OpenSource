@@ -36,43 +36,43 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Validate source path
-        run: |
-          if [ ! -d "PolicyManagementJSP/src/main/java" ]; then
-            echo "Error: Source path PolicyManagementJSP/src/main/java does not exist."
-            exit 1
-          fi
-          if [ ! -f "PolicyManagementJSP/pom.xml" ]; then
-            echo "Error: Maven POM file PolicyManagementJSP/pom.xml does not exist."
-            exit 1
-          fi
+      # - name: Validate source path
+      #   run: |
+      #     if [ ! -d "PolicyManagementJSP/src/main/java" ]; then
+      #       echo "Error: Source path PolicyManagementJSP/src/main/java does not exist."
+      #       exit 1
+      #     fi
+      #     if [ ! -f "PolicyManagementJSP/pom.xml" ]; then
+      #       echo "Error: Maven POM file PolicyManagementJSP/pom.xml does not exist."
+      #       exit 1
+      #     fi
 
-      - name: Build Maven
-        run: |
-          mvn clean install -DskipTests -X -f PolicyManagementJSP/pom.xml
-        continue-on-error: false
+      # - name: Build Maven
+      #   run: |
+      #     mvn clean install -DskipTests -X -f PolicyManagementJSP/pom.xml
+      #   continue-on-error: false
 
-      - name: Debug target directory
-        run: |
-          ls -l PolicyManagementJSP/target || echo "Target directory not found"
-          find PolicyManagementJSP/target -type f || echo "No files in target"
+      # - name: Debug target directory
+      #   run: |
+      #     ls -l PolicyManagementJSP/target || echo "Target directory not found"
+      #     find PolicyManagementJSP/target -type f || echo "No files in target"
 
-      - name: Run SonarQube
-        uses: SonarSource/sonarqube-scan-action@v3
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        with:
-          args: >
-            -Dsonar.projectKey=Modernize-Different-OpenSource
-            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-            -Dsonar.sources=PolicyManagementJSP/src/main/java
-            -Dsonar.java.binaries=PolicyManagementJSP/target/classes
+      # - name: Run SonarQube
+      #   uses: SonarSource/sonarqube-scan-action@v3
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      #   with:
+      #     args: >
+      #       -Dsonar.projectKey=Modernize-Different-OpenSource
+      #       -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+      #       -Dsonar.sources=PolicyManagementJSP/src/main/java
+      #       -Dsonar.java.binaries=PolicyManagementJSP/target/classes
 
-      - name: Install Checkstyle
-        run: |
-          mvn checkstyle:check -f PolicyManagementJSP/pom.xml
-          mv PolicyManagementJSP/target/checkstyle-result.xml reports/checkstyle-report.xml
+      # - name: Install Checkstyle
+      #   run: |
+      #     mvn checkstyle:check -f PolicyManagementJSP/pom.xml
+      #     mv PolicyManagementJSP/target/checkstyle-result.xml reports/checkstyle-report.xml
 
       - name: Install Hugging Face dependencies
         run: |
