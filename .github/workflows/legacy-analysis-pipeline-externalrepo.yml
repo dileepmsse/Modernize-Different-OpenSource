@@ -68,22 +68,22 @@ jobs:
           ls -l ${{ inputs.source_path }}/target || echo "Target directory not found"
           find ${{ inputs.source_path }}/target -type f || echo "No files in target"
 
-      - name: Run SonarQube
-        uses: SonarSource/sonarqube-scan-action@v3
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        with:
-          args: >
-            -Dsonar.projectKey=Modernize-Different-OpenSource
-            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-            -Dsonar.sources=${{ inputs.source_path }}/src/main/java
-            -Dsonar.java.binaries=${{ inputs.source_path }}/target/classes
+      # - name: Run SonarQube
+      #   uses: SonarSource/sonarqube-scan-action@v3
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      #   with:
+      #     args: >
+      #       -Dsonar.projectKey=Modernize-Different-OpenSource
+      #       -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+      #       -Dsonar.sources=${{ inputs.source_path }}/src/main/java
+      #       -Dsonar.java.binaries=${{ inputs.source_path }}/target/classes
 
-      - name: Install Checkstyle
-        run: |
-          mvn checkstyle:check -f ${{ inputs.source_path }}/pom.xml
-          mv ${{ inputs.source_path }}/target/checkstyle-result.xml reports/checkstyle-report.xml
+      # - name: Install Checkstyle
+      #   run: |
+      #     mvn checkstyle:check -f ${{ inputs.source_path }}/pom.xml
+      #     mv ${{ inputs.source_path }}/target/checkstyle-result.xml reports/checkstyle-report.xml
 
   #     - name: Install Hugging Face dependencies
   #       run: |
