@@ -44,15 +44,14 @@
             <groupId>io.supabase</groupId>
             <artifactId>postgrest-java</artifactId>
             <version>0.3.2</version>
-        </dependency>
-    </dependencies> -->
+        </dependency>-->
         <!-- https://mvnrepository.com/artifact/io.supabase/postgrest-kt -->
         <dependency>
             <groupId>io.supabase</groupId>
             <artifactId>postgrest-kt</artifactId>
             <version>0.1.0</version>
         </dependency>
-
+    </dependencies>
     <build>
         <plugins>
             <plugin>
