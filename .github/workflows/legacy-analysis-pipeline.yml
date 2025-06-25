@@ -36,6 +36,16 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Install Maven
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y maven
+
+      - name: Build project
+        run: |
+          mvn clean install -DskipTests -f PolicyManagementJSP/pom.xml
+        continue-on-error: false  
+
       - name: Run SonarQube
         uses: SonarSource/sonarqube-scan-action@v3
         env:
@@ -50,7 +60,6 @@ jobs:
 
       - name: Install Checkstyle
         run: |
-          mvn install -DskipTests -f PolicyManagementJSP/pom.xml
           mvn checkstyle:check -f PolicyManagementJSP/pom.xml
           mv PolicyManagementJSP/target/checkstyle-result.xml reports/checkstyle-report.xml
 
