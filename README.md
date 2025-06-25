@@ -79,6 +79,7 @@ Go to Settings > Secrets and variables > Actions in your GitHub repository.
 Add the following secrets:
 SONAR_TOKEN: From SonarCloud.
 SONAR_HOST_URL: https://sonarcloud.io.
+SONAR_ORGANIZATION: github username
 HUGGINGFACE_TOKEN: From Hugging Face.
 SUPABASE_URL: From Supabase (Settings > API > URL).
 SUPABASE_KEY: From Supabase (Settings > API > anon key).
