@@ -27,7 +27,7 @@ public class PolicyDAO {
                 policy.setId(rs.getInt("id"));
                 policy.setPolicyNumber(rs.getString("policy_number"));
                 policy.setPolicyHolder(rs.getString("policy_holder"));
-                policy.setCoverageAmount(rs.getDouble("coverage_amount"));
+                policy.setCoverageAmount(rs.getBigDecimal("coverage_amount"));
                 policies.add(policy);
             }
         } catch (SQLException e) {

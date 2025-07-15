@@ -12,7 +12,7 @@ on:
       source_path:
         description: 'Path to source code in repo (e.g., PolicyManagementJSP)'
         required: true
-        default: 'PolicyManagementJSP'
+        default: 'PolicyManagementJSPRepo/PolicyManagementJSP'
       entity_name:
         description: 'Entity name (e.g., Policy, Account, Patient)'
         required: true
