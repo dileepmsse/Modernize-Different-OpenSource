@@ -81,8 +81,8 @@ jobs:
 
       - name: Debug target directory
         run: |
-          ls -l PolicyManagementJSP/target || echo "Target directory not found"
-          find PolicyManagementJSP/target -type f || echo "No files in target"
+          ls -l source-repo/PolicyManagementJSP/target || echo "Target directory not found"
+          find source-repo/PolicyManagementJSP/target -type f || echo "No files in target"
 
       - name: Run SonarQube
         uses: SonarSource/sonarqube-scan-action@v3
@@ -93,13 +93,13 @@ jobs:
           args: >
             -Dsonar.projectKey=Modernize-Different-OpenSource
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-            -Dsonar.sources=PolicyManagementJSP/src/main/java
-            -Dsonar.java.binaries=PolicyManagementJSP/target/classes
+            -Dsonar.sources=source-repo/PolicyManagementJSP/src/main/java
+            -Dsonar.java.binaries=source-repo/PolicyManagementJSP/target/classes
 
       - name: Install Checkstyle
         run: |
-          mvn checkstyle:check -f PolicyManagementJSP/pom.xml
-          mv PolicyManagementJSP/target/checkstyle-result.xml reports/checkstyle-report.xml
+          mvn checkstyle:check -f source-repo/PolicyManagementJSP/pom.xml
+          mv source-repo/PolicyManagementJSP/target/checkstyle-result.xml reports/checkstyle-report.xml
 
       - name: Install Hugging Face dependencies
         run: |
@@ -107,7 +107,7 @@ jobs:
 
       - name: Run CodeBERT via Hugging Face Inference API
         run: |
-          python scripts/codebert_summary.py PolicyManagementJSP/src/main/java
+          python scripts/codebert_summary.py source-repo/PolicyManagementJSP/src/main/java
         env:
           HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
 
@@ -145,7 +145,7 @@ jobs:
       - name: Generate requirements with LangChain
         run: |
           python scripts/generate_requirements.py \
-            --source PolicyManagementJSP/src/main/java \
+            --source source-repo/PolicyManagementJSP/src/main/java \
             --entity ${{ inputs.entity_name }} \
             --industry ${{ inputs.industry }} \
             --output docs/requirements.md
@@ -161,7 +161,7 @@ jobs:
       - name: Generate system inventory
         run: |
           python scripts/generate_inventory.py \
-            --source PolicyManagementJSP \
+            --source source-repo/PolicyManagementJSP \
             --output docs/inventory.md
 
       - name: Commit documentation
