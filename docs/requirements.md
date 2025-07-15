@@ -1,4 +1,4 @@
-# Insurance Policy Requirements
+# Industry Policy Requirements
 
 ### Functional Requirements
 - FR1: Search policy by number or name.

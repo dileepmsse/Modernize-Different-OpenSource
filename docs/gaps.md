@@ -1,4 +1,4 @@
-# Gap Analysis mainfile
+# Gap Analysis
 
 Gap 1: No RESTful APIs
   Impact: Prevents integration with modern systems.
