@@ -142,13 +142,13 @@ jobs:
         with:
           name: analysis-reports
           path: reports/
-
+# Pass entity and industry as inputs using parameters. For example, if entity is "Policy" and industry is "Insurance", use:
       - name: Generate requirements with LangChain
         run: |
           python scripts/generate_requirements.py \
             --source source-repo/PolicyManagementJSP/src/main/java \
-            --entity ${{ inputs.entity_name }} \
-            --industry ${{ inputs.industry }} \
+            --entity Policy \
+            --industry Industry \
             --output docs/requirements.md
         env:
           HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
