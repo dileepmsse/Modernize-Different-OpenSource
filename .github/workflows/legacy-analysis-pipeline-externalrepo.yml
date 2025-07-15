@@ -95,10 +95,11 @@ jobs:
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
             -Dsonar.sources=source-repo/PolicyManagementJSP/src/main/java
             -Dsonar.java.binaries=source-repo/PolicyManagementJSP/target/classes
-            
+
       - name: Install Checkstyle
         run: |
-          mvn checkstyle:checkstyle -Dcheckstyle.failOnViolation=false -f source-repo/PolicyManagementJSP/pom.xml
+          mvn checkstyle:checkstyle -Dcheckstyle.failOnViolation=false -f source-repo/PolicyManagementJSP/pom.xml 
+          mkdir reports/
           mv source-repo/PolicyManagementJSP/target/checkstyle-result.xml reports/checkstyle-report.xml
       
       - name: Install Hugging Face dependencies
