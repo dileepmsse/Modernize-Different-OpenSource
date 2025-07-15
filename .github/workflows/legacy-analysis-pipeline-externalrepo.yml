@@ -91,7 +91,7 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
-            -Dsonar.projectKey=Modernize-Different-OpenSource
+            -Dsonar.projectKey=dileepmsse_PolicyManagementJSPRepo
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
             -Dsonar.sources=source-repo/PolicyManagementJSP/src/main/java
             -Dsonar.java.binaries=source-repo/PolicyManagementJSP/target/classes
