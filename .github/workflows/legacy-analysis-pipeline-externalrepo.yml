@@ -76,7 +76,7 @@ jobs:
 
       - name: Build Maven
         run: |
-          mvn clean install -DskipTests -X -f PolicyManagementJSP/pom.xml
+          mvn clean install -DskipTests -X -f source-repo/PolicyManagementJSP/pom.xml
         continue-on-error: false
 
       - name: Debug target directory
