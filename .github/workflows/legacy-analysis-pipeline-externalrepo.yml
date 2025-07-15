@@ -12,7 +12,7 @@ on:
       source_path:
         description: 'Path to source code in repo (e.g., PolicyManagementJSP)'
         required: true
-        default: 'PolicyManagementJSPRepo/PolicyManagementJSP'
+        default: 'PolicyManagementJSP'
       entity_name:
         description: 'Entity name (e.g., Policy, Account, Patient)'
         required: true
@@ -48,7 +48,7 @@ jobs:
           # Move source_path to workspace root
           # mv source-repo/PolicyManagementJSP .
           # Debug cloned contents
-          ls -l PolicyManagementJSP
+          ls -l source-repo/PolicyManagementJSP
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
