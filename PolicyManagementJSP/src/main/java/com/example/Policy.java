@@ -7,15 +7,17 @@ import java.util.Date;
 public class Policy implements Serializable {
     private int id;
     private String policyNumber;
+    private String policyHolder;
     private String customerName;
     private BigDecimal premium;
     private Date issueDate;
+    private BigDecimal coverageAmount;
 
     // Default constructor
     public Policy() {}
 
     // Parameterized constructor
-    public Policy(int id, String policyNumber, String customerName, BigDecimal premium, Date issueDate) {
+    public Policy(int id, String policyHolder, String policyNumber, String customerName, BigDecimal premium, Date issueDate, BigDecimal coverageAmount) {
         this.id = id;
         this.policyNumber = policyNumber;
         this.customerName = customerName;
@@ -34,4 +36,12 @@ public class Policy implements Serializable {
     public void setPremium(BigDecimal premium) { this.premium = premium; }
     public Date getIssueDate() { return issueDate; }
     public void setIssueDate(Date issueDate) { this.issueDate = issueDate; }
+
+    public void setPolicyHolder(String policyHolder) {
+        this.policyHolder = policyHolder;
+    }
+
+    public void setCoverageAmount(BigDecimal coverageAmount) {
+       this.coverageAmount= coverageAmount;
+    }
 }
