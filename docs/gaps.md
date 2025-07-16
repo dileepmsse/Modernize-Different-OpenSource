@@ -1,34 +1,14 @@
-# Resolving Conflicts with Current State
+# Gap Analysis
 
-When you encounter a conflict with the current state of your project, follow these steps:
-
-1. **Identify the Conflict**  
-  Use `git status` to see which files are in conflict.
-
-2. **Open the Conflicted Files**  
-  Look for conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`) in the files.
-
-3. **Manually Edit the Files**  
-  Decide which changes to keep:  
-  - Keep your changes  
-  - Keep the incoming changes  
-  - Or combine both
-
-4. **Mark as Resolved**  
-  After editing, run:
-  ```bash
-  git add <filename>
-  ```
-
-5. **Complete the Merge**  
-  Finish the merge with:
-  ```bash
-  git commit
-  ```
-
-6. **Test Your Code**  
-  Ensure everything works as expected.
-
----
-
-**Tip:** Use a merge tool like VS Code, Meld, or `git mergetool` for easier conflict resolution.
+Gap 1: No RESTful APIs
+  Impact: Prevents integration with modern systems.
+  Desired State: REST APIs via Supabase.
+Gap 2: Non-responsive UI
+  Impact: Poor mobile experience.
+  Desired State: React-based mobile-first UI.
+Gap 3: No AI-driven insights
+  Impact: Missed automation opportunities.
+  Desired State: AI recommendations via Hugging Face.
+Gap 4: Limited scalability
+  Impact: Fails with 10,000+ users.
+  Desired State: Scalable backend with Supabase/Fly.io.
