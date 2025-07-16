@@ -15,7 +15,8 @@ def process_file(root, file, headers, summaries):
             json={"inputs": code[:512]}  # Truncate for API limits
         )
         if response.status_code == 200:
-            summary = f"File: {file}\nSummary: {response.json()[0]['label'] == 'POSITIVE' and 'Handles business logic' or 'Renders UI'}\n"
+            # summary = f"File: {file}\nSummary: {response.json()[0]['label'] == 'POSITIVE' and 'Handles business logic' or 'Renders UI'}\n"
+            summary = f"File: {file}\nSummary: {response.json()[0]['summary_text']}\n"
             summaries.append(summary)
         else:
             summaries.append(f"File: {file}\nSummary: Error processing code\n")
