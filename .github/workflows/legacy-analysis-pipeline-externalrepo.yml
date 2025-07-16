@@ -158,6 +158,8 @@ jobs:
           python scripts/generate_gaps.py \
             --analysis-reports reports/ \
             --output docs/gaps.md
+            --entity-name policy \
+            --industry Insurance
 
       - name: Generate system inventory
         run: |
