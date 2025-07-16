@@ -23,15 +23,21 @@ def generate_requirements(source_path, entity_name, industry, output, token):
                     code = f.read()[:512]  # Truncate for API limits
                 result = llm.invoke(prompt.format(code=code, entity=entity_name, industry=industry))
                 requirements.append(result)
-
+   
+    os.makedirs(os.path.dirname(output), exist_ok=True)
+    # Write the requirements to the output file
+    if not requirements:
+        requirements.append("No requirements extracted.")
+    requirements = [f"- {req}" for req in requirements]
+    
     with open(output, "w") as f:
         f.write(f"# {industry} {entity_name} Requirements\n\n")
-        f.write("### Functional Requirements\n")
-        f.write(f"- FR1: Search {entity_name.lower()} by number or name.\n")
-        f.write(f"- FR2: Display {entity_name.lower()} details (number, name, premium, issue date).\n")
-        f.write("\n### Non-Functional Requirements\n")
-        f.write("- NFR1: Response time <10 seconds (current: 5-10s).\n")
-        f.write("- NFR2: Support 10,000 concurrent users (current: fails at 1,000).\n")
+        # f.write("### Functional Requirements\n")
+        # f.write(f"- FR1: Search {entity_name.lower()} by number or name.\n")
+        # f.write(f"- FR2: Display {entity_name.lower()} details (number, name, premium, issue date).\n")
+        # f.write("\n### Non-Functional Requirements\n")
+        # f.write("- NFR1: Response time <10 seconds (current: 5-10s).\n")
+        # f.write("- NFR2: Support 10,000 concurrent users (current: fails at 1,000).\n")
         f.write("\n### AI-Generated Insights\n" + "\n".join(requirements))
 
 if __name__ == "__main__":
