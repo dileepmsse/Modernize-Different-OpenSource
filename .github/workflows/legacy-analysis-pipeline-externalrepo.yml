@@ -160,6 +160,8 @@ jobs:
             --output docs/gaps.md
             --entity-name policy \
             --industry Insurance
+          env:
+            HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
 
       - name: Generate system inventory
         run: |
