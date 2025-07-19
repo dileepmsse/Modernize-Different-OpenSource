@@ -99,7 +99,7 @@ jobs:
       - name: Install Checkstyle
         run: |
           mvn checkstyle:checkstyle -Dcheckstyle.failOnViolation=false -f source-repo/PolicyManagementJSP/pom.xml 
-          mkdir reports/
+          mkdir -p reports/
           mv source-repo/PolicyManagementJSP/target/checkstyle-result.xml reports/checkstyle-report.xml
       
       - name: Install Hugging Face dependencies
