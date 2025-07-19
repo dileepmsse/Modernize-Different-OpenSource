@@ -1,40 +1,67 @@
 import argparse
 import os
-import requests
 from pathlib import Path
 import json
+import re
+from openai import OpenAI
+import time
 
 def parse_codebert_summary(report_path):
     """Parse human-readable summaries from codebert-summary.md."""
     summary_path = Path(report_path) / "codebert-summary.md"
     if not summary_path.exists():
+        print(f"Warning: {summary_path} not found, relying on fallback.")
         return []
     summaries = []
     current_file = None
-    with open(summary_path, encoding="utf-8") as f:
-        for line in f:
-            if line.startswith("File: "):
-                current_file = line.replace("File: ", "").strip()
-            elif line.startswith("Summary: ") and current_file:
-                summary = line.replace("Summary: ", "").strip()
-                summaries.append({"file": current_file, "summary": summary})
+    try:
+        with open(summary_path, encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("File: "):
+                    current_file = line.replace("File: ", "").strip()
+                elif line.startswith("Summary: ") and current_file:
+                    summary = line.replace("Summary: ", "").strip()
+                    summaries.append({"file": current_file, "summary": summary})
+    except Exception as e:
+        print(f"Error: Failed to parse {summary_path}: {str(e)}")
+        return []
     return summaries
 
 def parse_sonar_report(report_path):
     """Parse SonarQube issues."""
     sonar_path = Path(report_path) / "sonar-report.json"
     if not sonar_path.exists():
+        print(f"Warning: {sonar_path} not found, relying on fallback.")
         return []
-    with open(sonar_path) as f:
-        data = json.load(f)
-        return data.get("issues", [])
+    try:
+        with open(sonar_path, encoding="utf-8") as f:
+            data = json.load(f)
+            return data.get("issues", [])
+    except Exception as e:
+        print(f"Error: Failed to parse {sonar_path}: {str(e)}")
+        return []
 
-def generate_gaps_from_model(summaries, sonar_issues, token, entity_name="Policy", industry="Insurance"):
-    """Generate modernization gaps using a language model."""
-    headers = {"Authorization": f"Bearer {token}"}
+def truncate_text(text, max_chars=1000):
+    """Truncate text to fit model token limit."""
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars] + "... [truncated]"
+
+def generate_gaps_from_model(summaries, sonar_issues, token, source_dir="PolicyManagementJSP/src/main/java", entity_name="Policy", industry="Insurance"):
+    """Generate modernization gaps using Hugging Face Router API."""
     gaps = []
     
-    # Prepare context for the model
+    # Initialize Router API client
+    try:
+        client = OpenAI(
+            api_key=token,
+            base_url="https://router.huggingface.co/v1"
+        )
+    except Exception as e:
+        print(f"Error: Failed to initialize Router API client: {str(e)}")
+        return generate_fallback_gaps(summaries, sonar_issues, source_dir)
+    
+    # Prepare context
     context = f"Industry: {industry}\nEntity: {entity_name}\n\nCode Analysis:\n"
     for summary in summaries:
         context += f"File: {summary['file']}\nSummary: {summary['summary']}\n\n"
@@ -42,9 +69,19 @@ def generate_gaps_from_model(summaries, sonar_issues, token, entity_name="Policy
     for issue in sonar_issues:
         context += f"Component: {issue.get('component', 'unknown')}, Type: {issue.get('type', 'unknown')}, Message: {issue.get('message', 'No message')}\n"
     
+    # Truncate context (Mistral-7B supports ~8K tokens, but we limit for cost)
+    context = truncate_text(context, max_chars=1000)
+    
     # Prompt for gap analysis
     prompt = f"""
-You are a software modernization expert. Based on the following code analysis and SonarQube issues, identify modernization gaps and provide specific recommendations for a {industry} application managing {entity_name} entities. Focus on modernizing legacy Java servlets, JSP, database access (using Neon), and other outdated practices. Output gaps in the format: "Gap: <description>. Recommendation: <action>."
+You are a software modernization expert. Based on the following code analysis and SonarQube issues, identify modernization gaps for a {industry} application managing {entity_name} entities. Focus on modernizing legacy Java servlets, JSP, database access (using Neon), and outdated libraries. Output gaps in the format: "Gap: <description>. Recommendation: <action>."
+
+Example Gaps:
+- Gap: Servlet-based architecture detected. Recommendation: Migrate to Spring Boot REST APIs.
+- Gap: Raw JDBC usage. Recommendation: Use Spring Data JPA with Neon.
+- Gap: JSP-based UI rendering. Recommendation: Adopt React or Angular.
+- Gap: Outdated logging library used. Recommendation: Adopt SLF4J with Logback.
+- Gap: Hardcoded database credentials. Recommendation: Use environment variables with Spring Security.
 
 Context:
 {context}
@@ -52,44 +89,124 @@ Context:
 Provide a list of modernization gaps and recommendations.
 """
     
-    try:
-        response = requests.post(
-            "https://api-inference.huggingface.co/models/mixtralai/Mixtral-8x7B-Instruct-v0.1",
-            headers=headers,
-            json={
-                "inputs": prompt,
-                "parameters": {"max_new_tokens": 500, "temperature": 0.7}
-            }
-        )
-        if response.status_code == 200:
-            result = response.json()[0]["generated_text"]
-            # Extract gaps from response (assuming model outputs in requested format)
-            for line in result.split("\n"):
-                if line.startswith("Gap:"):
-                    gaps.append(line.strip())
-        else:
-            gaps.append(f"Error: Failed to generate gaps from model (status: {response.status_code})")
-    except Exception as e:
-        gaps.append(f"Error: Exception in model inference: {str(e)}")
+    # Try models in order (Mistral-7B first, as it's free-tier friendly)
+    model_endpoints = [
+        "mistralai/Mistral-7B-Instruct-v0.2",
+        "mistralai/Mixtral-8x7B-Instruct-v0.1"
+    ]
+    
+    for model in model_endpoints:
+        for attempt in range(3):  # Retry up to 3 times for rate limits
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "You are a software modernization expert."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=500,
+                    temperature=0.7
+                )
+                result_text = response.choices[0].message.content.strip()
+                # Extract gaps
+                for line in result_text.split("\n"):
+                    if line.strip().startswith("Gap:"):
+                        gaps.append(line.strip())
+                if gaps:
+                    return gaps
+                print(f"Warning: No valid gaps extracted from {model} output.")
+                time.sleep(2 ** attempt)  # Exponential backoff
+            except Exception as e:
+                error_msg = f"Error: Exception in {model} inference (attempt {attempt + 1}): {str(e)}"
+                print(error_msg)
+                if "rate limit" in str(e).lower() or "429" in str(e):
+                    time.sleep(2 ** attempt)  # Backoff for rate limits
+                    continue
+                break
+    
+    # If all models fail, use fallback
+    print("Warning: All model inferences failed, using fallback.")
+    gaps.extend(generate_fallback_gaps(summaries, sonar_issues, source_dir))
+    return gaps
+
+def generate_fallback_gaps(summaries, sonar_issues, source_dir="PolicyManagementJSP/src/main/java"):
+    """Generate gaps using rule-based logic as a fallback."""
+    gaps = []
+    # Parse summaries if available
+    for summary in summaries:
+        if "servlet" in summary["summary"].lower():
+            gaps.append(f"Gap: {summary['file']} uses legacy servlet architecture. Recommendation: Migrate to Spring Boot REST APIs.")
+        if "dependency injection" in summary["summary"].lower():
+            gaps.append(f"Gap: {summary['file']} lacks dependency injection. Recommendation: Adopt Spring Framework for DI.")
+        if "jsp" in summary["summary"].lower():
+            gaps.append(f"Gap: {summary['file']} uses JSP for rendering. Recommendation: Migrate to modern frontend framework like React or Angular.")
+        if "jdbc" in summary["summary"].lower():
+            gaps.append(f"Gap: {summary['file']} uses raw JDBC. Recommendation: Adopt Spring Data JPA with Neon for modern ORM.")
+        if "logging" in summary["summary"].lower():
+            gaps.append(f"Gap: {summary['file']} uses outdated logging. Recommendation: Adopt SLF4J with Logback.")
+    
+    # Parse SonarQube issues
+    for issue in sonar_issues:
+        if issue.get("type") == "CODE_SMELL":
+            gaps.append(f"Gap: Code smell in {issue.get('component', 'unknown')}: {issue.get('message', 'No message')}. Recommendation: Refactor code.")
+    
+    # If no summaries, parse raw source code
+    if not summaries and os.path.exists(source_dir):
+        try:
+            for root, _, files in os.walk(source_dir):
+                for file in files:
+                    if file.endswith(".java"):
+                        file_path = Path(root) / file
+                        try:
+                            with open(file_path, encoding="utf-8") as f:
+                                content = f.read()
+                                if "javax.servlet" in content:
+                                    gaps.append(f"Gap: {file} uses legacy servlet architecture. Recommendation: Migrate to Spring Boot REST APIs.")
+                                if "java.sql" in content:
+                                    gaps.append(f"Gap: {file} uses raw JDBC. Recommendation: Adopt Spring Data JPA with Neon.")
+                                if "HttpSession" in content:
+                                    gaps.append(f"Gap: {file} uses HttpSession for state management. Recommendation: Use stateless JWT or Spring Session.")
+                                if "System.out.println" in content or "log4j" in content:
+                                    gaps.append(f"Gap: {file} uses outdated logging. Recommendation: Adopt SLF4J with Logback.")
+                                if "password" in content.lower() or "credential" in content.lower():
+                                    gaps.append(f"Gap: {file} may contain hardcoded credentials. Recommendation: Use environment variables with Spring Security.")
+                        except Exception as e:
+                            print(f"Error: Failed to parse {file_path}: {str(e)}")
+        except Exception as e:
+            print(f"Error: Failed to walk source directory {source_dir}: {str(e)}")
+    
+    if not gaps:
+        gaps.append("Gap: No modernization gaps identified due to missing analysis data. Recommendation: Ensure codebert_summary.py and SonarQube analysis complete successfully.")
     
     return gaps
 
 def generate_gaps(reports_dir, output_path, entity_name="Policy", industry="Insurance"):
-    """Generate modernization gaps using a model."""
+    """Generate modernization gaps using Router API with fallback."""
     codebert_summaries = parse_codebert_summary(reports_dir)
     sonar_issues = parse_sonar_report(reports_dir)
     token = os.environ.get("HUGGINGFACE_TOKEN")
     if not token:
-        raise ValueError("HUGGINGFACE_TOKEN environment variable not set")
+        print("Error: HUGGINGFACE_TOKEN environment variable not set, using fallback.")
+        gaps = generate_fallback_gaps(codebert_summaries, sonar_issues, source_dir="PolicyManagementJSP/src/main/java")
+    else:
+        gaps = generate_gaps_from_model(codebert_summaries, sonar_issues, token, source_dir="PolicyManagementJSP/src/main/java", entity_name=entity_name, industry=industry)
     
-    gaps = generate_gaps_from_model(codebert_summaries, sonar_issues, token, entity_name, industry)
+    # Ensure gaps are not empty
+    if not gaps:
+        print("Warning: No gaps generated, forcing fallback.")
+        gaps = generate_fallback_gaps(codebert_summaries, sonar_issues, source_dir="PolicyManagementJSP/src/main/java")
     
     # Write gaps to output
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write("# Modernization Gaps\n\n")
-        for gap in gaps:
-            f.write(f"- {gap}\n")
+    try:
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write("# Modernization Gaps\n\n")
+            for gap in gaps:
+                f.write(f"- {gap}\n")
+        print(f"Generated gaps written to {output_path}")
+    except Exception as e:
+        print(f"Error: Failed to write to {output_path}: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
