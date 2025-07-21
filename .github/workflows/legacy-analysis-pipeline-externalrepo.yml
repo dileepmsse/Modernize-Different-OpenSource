@@ -105,7 +105,11 @@ jobs:
       - name: Install Hugging Face dependencies
         run: |
           python -m pip install transformers requests
-
+      
+      - name: Install openAI
+        run: |
+          python -m pip install openai
+      
       - name: Run CodeBERT via Hugging Face Inference API
         run: |
           python scripts/codebert_summary.py source-repo/PolicyManagementJSP/src/main/java
