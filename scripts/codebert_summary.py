@@ -13,7 +13,7 @@ def clean_code(code):
     code = re.sub(r'//.*?\n', '\n', code)
     # Normalize whitespace
     code = re.sub(r'\s+', ' ', code.strip())
-    return code[:1000]  # Truncate to 1000 chars for API limits
+    return code[:2000]  # Truncate to 1000 chars for API limits
 
 def process_file(root, file, headers, summaries):
     file_path = os.path.join(root, file)
@@ -30,7 +30,7 @@ def process_file(root, file, headers, summaries):
             headers=headers,
             json={
                 "inputs": cleaned_code,
-                "parameters": {"max_length": 100, "min_length": 30}
+                "parameters": {"max_length": 500, "min_length": 30}
             }
         )
         if response.status_code == 200:
