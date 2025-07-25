@@ -61,7 +61,7 @@ def generate_summary(code, file_name, token):
     
     # Prompt for meaningful summary
     prompt = f"""
-You are a Java code analysis expert. Analyze the following Java code and provide a concise summary (2–3 sentences, up to 512 tokens) of its functionality, architecture, and potential modernization issues. Focus on identifying legacy patterns (e.g., servlets, JSP, raw JDBC, outdated logging, hardcoded credentials) and suggest modern alternatives (e.g., Spring Boot, Spring Data JPA, SLF4J). Do not list code snippets, imports, or variable declarations; focus on behavior and improvements. Output only the summary text.
+You are a Java code analysis expert. Analyze the following Java code and provide a concise summary (2–3 sentences, up to 512 tokens) of its functionality, architecture, and potential modernization issues. Focus on identifying legacy patterns (e.g., servlets, JSP, raw JDBC, outdated logging, hardcoded credentials) and suggest modern alternatives (e.g., Spring Boot, Spring Data JPA, SLF4J). Do not list code snippets, imports, or variable declarations; focus on behavior and improvements. Output only the summary text not code.
 
 Code (File: {file_name}):
 {code}
