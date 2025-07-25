@@ -112,7 +112,7 @@ jobs:
       
       - name: Run CodeBERT via Hugging Face Inference API
         run: |
-          python scripts/codebert_summary.py source-repo/PolicyManagementJSP/src/main/java
+          python scripts/codebert_summary.py source-repo/PolicyManagementJSP/src/main/java --output reports/codebert-summary.md
         env:
           HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
 
