@@ -61,7 +61,7 @@ def generate_summary(code, file_name, token):
         }
     }
 
-    url = "https://api-inference.huggingface.co/models/microsoft/UniXcoder-base"
+    url = "https://api-inference.huggingface.co/models/google/pegasus-xsum"
 
     for attempt in range(3):
         try:
