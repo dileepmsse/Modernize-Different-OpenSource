@@ -47,33 +47,19 @@ def truncate_text(text, max_chars=1000):
         return text
     return text[:max_chars] + "... [truncated]"
 
-def generate_gaps_from_model(summaries, sonar_issues, token, source_dir="PolicyManagementJSP/src/main/java", entity_name="Policy", industry="Insurance"):
-    """Generate modernization gaps using Hugging Face Router API."""
-    gaps = []
-    
-    # Initialize Router API client
-    try:
-        client = OpenAI(
-            api_key=token,
-            base_url="https://router.huggingface.co/v1"
-        )
-    except Exception as e:
-        print(f"Error: Failed to initialize Router API client: {str(e)}")
-        return generate_fallback_gaps(summaries, sonar_issues, source_dir)
-    
-    # Prepare context
+def build_context(summaries, sonar_issues, industry, entity_name):
+    """Build context string for model prompt."""
     context = f"Industry: {industry}\nEntity: {entity_name}\n\nCode Analysis:\n"
     for summary in summaries:
         context += f"File: {summary['file']}\nSummary: {summary['summary']}\n\n"
     context += "SonarQube Issues:\n"
     for issue in sonar_issues:
         context += f"Component: {issue.get('component', 'unknown')}, Type: {issue.get('type', 'unknown')}, Message: {issue.get('message', 'No message')}\n"
-    
-    # Truncate context (Mistral-7B supports ~8K tokens, but we limit for cost)
-    context = truncate_text(context, max_chars=1000)
-    
-    # Prompt for gap analysis
-    prompt = f"""
+    return truncate_text(context, max_chars=1000)
+
+def build_prompt(context, industry, entity_name):
+    """Build prompt for gap analysis."""
+    return f"""
 You are a software modernization expert. Based on the following code analysis and SonarQube issues, identify modernization gaps for a {industry} application managing {entity_name} entities. Focus on modernizing legacy Java servlets, JSP, database access (using Neon), and outdated libraries. Output gaps in the format: "Gap: <description>. Recommendation: <action>."
 
 Example Gaps:
@@ -88,46 +74,67 @@ Context:
 
 Provide a list of modernization gaps and recommendations.
 """
-    
-    # Try models in order (Mistral-7B first, as it's free-tier friendly)
+
+def extract_gaps_from_response(result_text):
+    """Extract gaps from model response text."""
+    return [line.strip() for line in result_text.split("\n") if line.strip().startswith("Gap:")]
+
+def call_huggingface_model(client, model, prompt, max_attempts=3):
+    """Call Hugging Face model and return gaps or None."""
+    for attempt in range(max_attempts):
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "You are a software modernization expert."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500,
+                temperature=0.7
+            )
+            result_text = response.choices[0].message.content.strip()
+            gaps = extract_gaps_from_response(result_text)
+            if gaps:
+                return gaps
+            print(f"Warning: No valid gaps extracted from {model} output.")
+            time.sleep(2 ** attempt)
+        except Exception as e:
+            error_msg = f"Error: Exception in {model} inference (attempt {attempt + 1}): {str(e)}"
+            print(error_msg)
+            if "rate limit" in str(e).lower() or "429" in str(e):
+                time.sleep(2 ** attempt)
+                continue
+            break
+    return None
+
+def generate_gaps_from_model(summaries, sonar_issues, token, source_dir="PolicyManagementJSP/src/main/java", entity_name="Policy", industry="Insurance"):
+    """Generate modernization gaps using Hugging Face Router API."""
+    # Validate OpenAI client compatibility with Hugging Face router API
+    try:
+        client = OpenAI(
+            api_key=token,
+            base_url="https://api.endpoints.huggingface.cloud/v1"
+        )
+    except Exception as e:
+        print(f"Error: Failed to initialize Hugging Face API client: {str(e)}")
+        return generate_fallback_gaps(summaries, sonar_issues, source_dir)
+
+    context = build_context(summaries, sonar_issues, industry, entity_name)
+    prompt = build_prompt(context, industry, entity_name)
+
+    # Use endpoints compatible with Hugging Face Inference Endpoints
     model_endpoints = [
         "mistralai/Mistral-7B-Instruct-v0.2",
         "mistralai/Mixtral-8x7B-Instruct-v0.1"
     ]
-    
+
     for model in model_endpoints:
-        for attempt in range(3):  # Retry up to 3 times for rate limits
-            try:
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": "You are a software modernization expert."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    max_tokens=500,
-                    temperature=0.7
-                )
-                result_text = response.choices[0].message.content.strip()
-                # Extract gaps
-                for line in result_text.split("\n"):
-                    if line.strip().startswith("Gap:"):
-                        gaps.append(line.strip())
-                if gaps:
-                    return gaps
-                print(f"Warning: No valid gaps extracted from {model} output.")
-                time.sleep(2 ** attempt)  # Exponential backoff
-            except Exception as e:
-                error_msg = f"Error: Exception in {model} inference (attempt {attempt + 1}): {str(e)}"
-                print(error_msg)
-                if "rate limit" in str(e).lower() or "429" in str(e):
-                    time.sleep(2 ** attempt)  # Backoff for rate limits
-                    continue
-                break
-    
-    # If all models fail, use fallback
+        gaps = call_huggingface_model(client, model, prompt)
+        if gaps:
+            return gaps
+
     print("Warning: All model inferences failed, using fallback.")
-    gaps.extend(generate_fallback_gaps(summaries, sonar_issues, source_dir))
-    return gaps
+    return generate_fallback_gaps(summaries, sonar_issues, source_dir)
 
 def generate_fallback_gaps(summaries, sonar_issues, source_dir="PolicyManagementJSP/src/main/java"):
     """Generate gaps using rule-based logic as a fallback."""
