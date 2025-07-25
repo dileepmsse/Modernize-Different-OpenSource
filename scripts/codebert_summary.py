@@ -1,17 +1,16 @@
 import argparse
 import os
-from pathlib import Path
-import re
-from openai import OpenAI
 import time
 import logging
+import requests
+from pathlib import Path
 
-# Set up logging to console and file for debugging
+# Set up logging to console and file
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('codebert_summary.log'),
+        logging.FileHandler('unixcoder_summary.log'),
         logging.StreamHandler()
     ]
 )
@@ -37,61 +36,53 @@ def truncate_text(text, max_chars=2000):
     return text[:max_chars] + "... [truncated]"
 
 def generate_summary(code, file_name, token):
-    """Generate a summary for a Java file using Hugging Face Router API."""
+    """Generate a summary for a Java file using UniXcoder via Hugging Face Inference API."""
     if not code:
         logger.warning(f"No content for {file_name}, using fallback")
         return generate_fallback_summary(code, file_name)
-    
+
     if not token:
         logger.warning("HUGGINGFACE_TOKEN not set, using fallback")
         return generate_fallback_summary(code, file_name)
-    
-    try:
-        client = OpenAI(
-            api_key=token,
-            base_url="https://router.huggingface.co/v1"
-        )
-        logger.info(f"Initialized Router API client for {file_name}")
-    except Exception as e:
-        logger.error(f"Failed to initialize Router API client for {file_name}: {str(e)}")
-        return generate_fallback_summary(code, file_name)
-    
-    # Truncate code to avoid exceeding context limit
-    code = truncate_text(code, max_chars=2000)
-    
-    # Prompt for meaningful summary
-    prompt = f"""
-You are a Java code analysis expert. Analyze the following Java code and provide a concise summary (2–3 sentences, up to 512 tokens) of its functionality, architecture, and potential modernization issues. Focus on identifying legacy patterns (e.g., servlets, JSP, raw JDBC, outdated logging, hardcoded credentials) and suggest modern alternatives (e.g., Spring Boot, Spring Data JPA, SLF4J). Do not list code snippets, imports, or variable declarations; focus on behavior and improvements. Output only the summary text not code.
 
-Code (File: {file_name}):
-{code}
-"""
-    
-    for attempt in range(3):  # Retry up to 3 times
+    code = truncate_text(code, max_chars=2000)
+    prompt = f"Summarize the following Java code in plain English:\n\n{code}"
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 512,
+            "temperature": 0.7
+        }
+    }
+
+    url = "https://api-inference.huggingface.co/models/microsoft/UniXcoder-base"
+
+    for attempt in range(3):
         try:
-            response = client.chat.completions.create(
-                model="microsoft/codebert-base",
-                messages=[
-                    {"role": "system", "content": "You are a Java code analysis expert."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=512,
-                temperature=0.7
-            )
-            summary = response.choices[0].message.content.strip()
-            if summary:
+            response = requests.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+            result = response.json()
+
+            if isinstance(result, list) and "generated_text" in result[0]:
+                summary = result[0]["generated_text"].strip()
                 logger.info(f"Generated summary for {file_name}: {summary[:50]}...")
                 return summary
-            logger.warning(f"Empty summary from CodeBERT for {file_name}, attempt {attempt + 1}")
-            time.sleep(2 ** attempt)  # Exponential backoff
+            else:
+                logger.warning(f"Unexpected response format for {file_name}, attempt {attempt + 1}")
         except Exception as e:
-            logger.error(f"Exception in CodeBERT inference for {file_name} (attempt {attempt + 1}): {str(e)}")
+            logger.error(f"Exception during UniXcoder inference for {file_name} (attempt {attempt + 1}): {str(e)}")
             if "rate limit" in str(e).lower() or "429" in str(e):
                 time.sleep(2 ** attempt)
                 continue
             break
-    
-    logger.warning(f"CodeBERT failed for {file_name}, using fallback")
+
+    logger.warning(f"UniXcoder failed for {file_name}, using fallback")
     return generate_fallback_summary(code, file_name)
 
 def generate_fallback_summary(code, file_name):
@@ -100,7 +91,7 @@ def generate_fallback_summary(code, file_name):
     if not code:
         summary += " No code content available, possibly due to file read error."
         return summary
-    
+
     if "javax.servlet" in code or "jakarta.servlet" in code:
         summary += " It implements a servlet to handle HTTP requests and responses, indicating a legacy web architecture. Migrate to Spring Boot REST APIs for modern scalability."
     if "java.sql" in code:
@@ -113,27 +104,27 @@ def generate_fallback_summary(code, file_name):
         summary += " It may contain hardcoded credentials, posing a security risk. Use environment variables with Spring Security."
     if "implements Serializable" in code:
         summary += " It defines a serializable entity, likely a data model. Consider using Lombok to reduce boilerplate."
-    
+
     logger.info(f"Generated fallback summary for {file_name}: {summary[:50]}...")
     return summary
 
-def generate_codebert_summary(source_dir, output_path):
-    """Generate CodeBERT summaries for all Java files in source_dir."""
+def generate_unixcoder_summary(source_dir, output_path):
+    """Generate UniXcoder summaries for all Java files in source_dir."""
     logger.info(f"Processing source directory: {source_dir}")
     source_path = Path(source_dir)
     if not source_path.exists():
         logger.error(f"Source directory {source_dir} does not exist")
         raise FileNotFoundError(f"Source directory {source_dir} does not exist")
-    
+
     token = os.environ.get("HUGGINGFACE_TOKEN")
     if not token:
         logger.warning("HUGGINGFACE_TOKEN not set, using fallback for all files")
-    
+
     summaries = []
     java_files = list(source_path.rglob("*.java"))
     if not java_files:
         logger.warning(f"No Java files found in {source_dir}")
-    
+
     for file_path in java_files:
         relative_path = file_path.relative_to(source_path.parent)
         logger.info(f"Processing file: {relative_path}")
@@ -146,22 +137,20 @@ def generate_codebert_summary(source_dir, output_path):
             continue
         summary = generate_fallback_summary(code, str(relative_path)) if not token else generate_summary(code, str(relative_path), token)
         summaries.append({"file": str(relative_path), "summary": summary})
-    
-    # Ensure non-empty output
+
     if not summaries:
         logger.warning("No summaries generated, adding default")
         summaries.append({
             "file": "N/A",
-            "summary": "No Java files found or processed successfully in the source directory. Ensure PolicyManagementJSP/src/main/java contains valid Java files and HUGGINGFACE_TOKEN is set."
+            "summary": "No Java files found or processed successfully in the source directory. Ensure the directory contains valid Java files and HUGGINGFACE_TOKEN is set."
         })
-    
-    # Write summaries to output
+
     output_path = Path(output_path)
     logger.info(f"Writing summaries to: {output_path}")
     os.makedirs(output_path.parent, exist_ok=True)
     try:
         with open(output_path, "w", encoding="utf-8") as f:
-            f.write("# CodeBERT Summaries\n\n")
+            f.write("# UniXcoder Summaries\n\n")
             for entry in summaries:
                 f.write(f"File: {entry['file']}\n")
                 f.write(f"Summary: {entry['summary']}\n\n")
@@ -173,6 +162,8 @@ def generate_codebert_summary(source_dir, output_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("source_dir", help="Directory containing Java source files")
-    parser.add_argument("--output", required=True, help="Output path for codebert-summary.md")
+    parser.add_argument("--output", required=True, help="Output path for summary markdown file")
     args = parser.parse_args()
-    generate_codebert_summary(args.source_dir, args.output)
+    generate_unixcoder_summary(args.source_dir, args.output)
+# This script generates summaries for Java files using UniXcoder via Hugging Face Inference API.
+# It reads Java files, generates summaries, and writes them to a markdown file. 
