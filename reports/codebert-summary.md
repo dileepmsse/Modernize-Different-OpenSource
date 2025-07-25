@@ -1,10 +1,11 @@
 # CodeBERT Summaries
 
-File: PolicyDAO.java
-Summary: package com.example; import java.sql.PreparedStatement; importjava.ql.DriverManager; import Java.util.ArrayList; import. java.lang.String; public class PolicyDAO: public static final String DB_URL = "jdbc:postgresql: private static finalString DB_USER = "neon_user"; private staticfinal String DB _PASSWORD = "your_password"; public List<Policy> searchP
+File: java/com/example/PolicyManagementJSP/LegacyServlet.java
+Summary: java/com/example/PolicyManagementJSP/LegacyServlet.java is a Java class. It implements a servlet to handle HTTP requests and responses, indicating a legacy web architecture. Migrate to Spring Boot REST APIs for modern scalability. It uses raw JDBC for database operations, which is error-prone. Adopt Spring Data JPA with Neon for modern ORM. It uses outdated logging (e.g., System.out or Log4j). Switch to SLF4J with Logback for better logging. It may contain hardcoded credentials, posing a security risk. Use environment variables with Spring Security.
 
-File: PolicySearchServlet.java
-Summary: package com.example; import jakarta.servlet.Servlet.WebServlet, JAKarta. ServletException, java.io.IOException.List, HttpServletResponse, H httpServletRequest, HhttpServlet response. PolicySearchServlet; @WebServlets("/search") public class Policy searchServlet { private PolicyDAO policyDAO; @Override public void init() throws Servlet.Exception; @
+File: java/com/example/PolicyManagementJSP/PolicyServlet.java
+Summary: java/com/example/PolicyManagementJSP/PolicyServlet.java is a Java class. It implements a servlet to handle HTTP requests and responses, indicating a legacy web architecture. Migrate to Spring Boot REST APIs for modern scalability. It uses raw JDBC for database operations, which is error-prone. Adopt Spring Data JPA with Neon for modern ORM. It may contain hardcoded credentials, posing a security risk. Use environment variables with Spring Security.
 
-File: Policy.java
-Summary: package com.example; import java.io.Serializable, java.math.BigDecimal; importjava.util.Date; public class Policy implements Serializable { private int id; private String policyNumber; privateString policyHolder, private String customerName; private BigDecimal premium; private Date issueDate; private bigDecimal coverageAmount; public Policy() { this.id = id; this.policyNumber = policyNumber, this.customerName =
+File: java/com/example/PolicyManagementJSP/Policy.java
+Summary: java/com/example/PolicyManagementJSP/Policy.java is a Java class. It uses raw JDBC for database operations, which is error-prone. Adopt Spring Data JPA with Neon for modern ORM.
+
