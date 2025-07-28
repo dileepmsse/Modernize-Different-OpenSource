@@ -77,7 +77,7 @@ def generate_summary(code, file_name, token):
         }
     }
 
-    url = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"  # Updated endpoint for Hugging Face Inference API
+    url = "https://router.huggingface.co/hf-inference/models/huggingface/CodeBERTa-small-v1"  # Updated endpoint for Hugging Face Inference API
 
     for attempt in range(3):
         try:
