@@ -61,7 +61,7 @@ def generate_summary(code, file_name, token):
         }
     }
 
-    url = "https://router.huggingface.co/v1/chat/completions"  # Updated endpoint for Hugging Face Inference API
+    url = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"  # Updated endpoint for Hugging Face Inference API
 
     for attempt in range(3):
         try:
