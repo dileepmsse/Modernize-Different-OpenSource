@@ -46,7 +46,22 @@ def generate_summary(code, file_name, token):
         return generate_fallback_summary(code, file_name)
 
     code = truncate_text(code, max_chars=2000)
-    prompt = f"Summarize the following Java code in plain English:\n\n{code}"
+    
+    sample_code_summary = (
+        "Implements a servlet to handle HTTP requests and responses, indicating a legacy web architecture. "
+        "Migrate to Spring Boot REST APIs for modern scalability. "
+        "Uses raw JDBC for database operations, which is error-prone. "
+        "Adopt Spring Data JPA with Neon for modern ORM. "
+        "Relies on HttpSession for state management, which can complicate scaling. "
+        "Use stateless JWT or Spring Session. "
+        "Uses outdated logging (e.g., System.out or Log4j). "
+        "Switch to SLF4J with Logback for better logging. "
+        "May contain hardcoded credentials, posing a security risk. "
+        "Use environment variables with Spring Security. "
+        "Defines a serializable entity, likely a data model. "
+        "Consider using Lombok to reduce boilerplate."
+        )
+    prompt = f"Summarize the following Java code in plain English without repeating code in response and expect like \n\n{sample_code_summary}. Code:\n\n{code}"
 
     headers = {
         "Authorization": f"Bearer {token}",
