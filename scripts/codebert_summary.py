@@ -68,7 +68,7 @@ def generate_summary(code, file_name, token):
             response = requests.post(url, headers=headers, json=payload)
             response.raise_for_status()
             result = response.json()
-
+            logger.info(f"result: {result}")
             if isinstance(result, list) and "generated_text" in result[0]:
                 summary = result[0]["generated_text"].strip()
                 logger.info(f"Generated summary for {file_name}: {summary[:50]}...")
