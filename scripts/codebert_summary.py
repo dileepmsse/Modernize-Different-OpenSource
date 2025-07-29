@@ -65,7 +65,7 @@ def generate_summary(code, file_name):
     client = AzureOpenAI(
         api_key=api_key,
         azure_endpoint=endpoint,
-        api_version="2023-07-01"
+        api_version="2024-12-01-preview"
     )
 
     for attempt in range(3):
