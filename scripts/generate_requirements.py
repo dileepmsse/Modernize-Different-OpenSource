@@ -64,6 +64,7 @@ def generate_requirements(source_path, entity_name, industry, output_path):
                         code = f.read()
                         if not code.strip():
                             continue
+                        print("Trigerred Azure OpenAI:\n", file_path)
                         result = extract_requirements_from_code(code, entity_name, industry, client, deployment)
                         if result:
                             requirements.append(f"### File: {file}\n{result}\n")
