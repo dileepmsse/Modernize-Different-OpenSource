@@ -46,8 +46,9 @@
 <h1>Markdown Journey</h1>  
 <ul id="fileList"></ul>  
 <div id="content"></div>  
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>  
+<script src="https://cdn.jsdelivr.net/npm/showdown"></script>  
 <script>  
+const converter = new showdown.Converter();  
 const fileList = document.getElementById('fileList');  
 const content = document.getElementById('content');  
 let currentIndex = 0;  
@@ -65,7 +66,8 @@ function showFile(index) {
     fetch(file.path)  
         .then(response => response.text())  
         .then(markdown => {  
-            content.innerHTML = marked(markdown);  
+            const html = converter.makeHtml(markdown);  
+            content.innerHTML = html;  
         });  
 }  
   
