@@ -142,6 +142,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Clone source repository
+        run: |
+         # Remove existing source_path to avoid conflicts
+          rm -rf PolicyManagementJSP
+          # Clone with shallow depth
+          git clone --depth 1 https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/dileepmsse/PolicyManagementJSPRepo.git source-repo
+          # Check if clone succeeded
+          if [ ! -d "source-repo" ]; then
+            echo "Error: Failed to clone repository ${{ inputs.source_repo }}"
+            exit 1
+          fi
+          # Verify source_path exists in cloned repo
+          if [ ! -d "source-repo/PolicyManagementJSP" ]; then
+            echo "Error: Source path source-repo/PolicyManagementJSP does not exist"
+            exit 1
+          fi
+          # Move source_path to workspace root
+          # mv source-repo/PolicyManagementJSP .
+          # Debug cloned contents
+          ls -l source-repo/PolicyManagementJSP
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
