@@ -6,7 +6,7 @@ from openai import AzureOpenAI
 def extract_requirements_from_code(code, entity, industry, client, deployment):
     """Call Azure OpenAI to extract requirements from code."""
     prompt = f"""
-You are a software analyst. Given the following C# code for a {industry} system managing {entity} entities, extract both functional and non-functional requirements.
+You are a software analyst. Given the following Java code for a {industry} system managing {entity} entities, extract both functional and non-functional requirements.
 
 Return the output in this format:
 Functional Requirements:
@@ -55,7 +55,9 @@ def generate_requirements(source_path, entity_name, industry, output_path):
     requirements = []
     for root, _, files in os.walk(source_path):
         for file in files:
-            if file.endswith(".cs"):
+            # Support multiple code file formats
+            supported_extensions = [".java", ".cs", ".py", ".js", ".ts"]
+            if any(file.endswith(ext) for ext in supported_extensions):
                 file_path = Path(root) / file
                 try:
                     with open(file_path, "r", encoding="utf-8") as f:
@@ -86,3 +88,29 @@ if __name__ == "__main__":
 
     generate_requirements(args.source, args.entity, args.industry, args.output)
 
+    # Example launch.json configuration for VS Code debugging
+    # Place this in a .vscode/launch.json file in your project root
+
+    # {
+    #     "version": "0.2.0",
+    #     "configurations": [
+    #         {
+    #             "name": "Python: generate_requirements",
+    #             "type": "python",
+    #             "request": "launch",
+    #             "program": "${workspaceFolder}/scripts/generate_requirements.py",
+    #             "console": "integratedTerminal",
+    #             "args": [
+    #                 "--source", "/path/to/source",
+    #                 "--entity", "Policy",
+    #                 "--industry", "Insurance",
+    #                 "--output", "/path/to/output/requirements.md"
+    #             ],
+    #             "env": {
+    #                 "AZURE_OPENAI_ENDPOINT": "https://your-endpoint.openai.azure.com/",
+    #                 "AZURE_OPENAI_KEY": "your-azure-openai-key",
+    #                 "AZURE_OPENAI_DEPLOYMENT": "your-deployment-name"
+    #             }
+    #         }
+    #     ]
+    # }
