@@ -1,4 +1,4 @@
-# Insurance Policy Requirements
+# Industry Policy Requirements
 
 ### File: PolicyDAO.java
 Functional Requirements:
