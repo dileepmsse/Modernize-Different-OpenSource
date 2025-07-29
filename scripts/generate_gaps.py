@@ -2,6 +2,7 @@ import argparse
 import os
 from pathlib import Path
 import json
+import re
 import time
 from openai import AzureOpenAI
 
@@ -52,7 +53,8 @@ def build_context(summaries, sonar_issues, industry, entity_name):
 
 def build_prompt(context, industry, entity_name):
     return f"""
-You are a software modernization expert. Based on the following code analysis and SonarQube issues, identify modernization gaps for a {industry} application managing {entity_name} entities. Focus on modernizing legacy Java servlets, JSP, database access (using Neon), and outdated libraries. Output gaps in the format: "Gap: <description>. Recommendation: <action>."
+You are a software modernization expert. Based on the following code analysis and SonarQube issues, identify modernization gaps for a {industry} application managing {entity_name} entities. Focus on modernizing legacy projects. 
+"List modernization gaps in the following format:\n\nGap: <description>\nRecommendation: <action>\n\nOnly return the list of gaps."
 
 Example Gaps:
 - Gap: Servlet-based architecture detected. Recommendation: Migrate to Spring Boot REST APIs.
@@ -68,7 +70,7 @@ Provide a list of modernization gaps and recommendations.
 """
 
 def extract_gaps_from_response(result_text):
-    return [line.strip() for line in result_text.split("\n") if line.strip().startswith("Gap:")]
+    return re.findall(r"(?i)(?:-\s*)?Gap:.*Recommendation:.*(?=\n|$)", result_text)
 
 def call_azure_openai_model(client, deployment, prompt, max_attempts=3):
     for attempt in range(max_attempts):
@@ -189,3 +191,22 @@ if __name__ == "__main__":
     args = parser.parse_args()
     generate_gaps(args.analysis_reports, args.output, args.entity_name, args.industry)
 
+    # Example configuration for local execution:
+    #
+    # 1. Ensure you have the required Python packages installed:
+    #    pip install openai
+    #
+    # 2. Set the following environment variables in your shell:
+    #    export AZURE_OPENAI_ENDPOINT="https://<your-endpoint>.openai.azure.com/"
+    #    export AZURE_OPENAI_KEY="<your-azure-openai-key>"
+    #    export AZURE_OPENAI_DEPLOYMENT="<your-deployment-name>"
+    #
+    # 3. Run the script with:
+    #    python /Users/dileep.mettu/Documents/GitHub/Modernize-Different-OpenSource/scripts/generate_gaps.py \
+    #      --analysis-reports <path-to-analysis-reports> \
+    #      --output <output-path-for-gaps.md> \
+    #      --entity-name <EntityName> \
+    #      --industry <Industry>
+    #
+    # Example:
+    #    python scripts/generate_gaps.py --analysis-reports ./reports --output ./gaps.md --entity-name Policy --industry Insurance
