@@ -1,10 +1,12 @@
 import argparse
 import os
-from pathlib import Path
 import json
 import re
 import time
+from pathlib import Path
 from openai import AzureOpenAI
+
+# -------------------- Parsing Functions --------------------
 
 def parse_codebert_summary(report_path):
     summary_path = Path(report_path) / "codebert-summary.md"
@@ -12,9 +14,9 @@ def parse_codebert_summary(report_path):
         print(f"Warning: {summary_path} not found, relying on fallback.")
         return []
     summaries = []
-    current_file = None
     try:
         with open(summary_path, encoding="utf-8") as f:
+            current_file = None
             for line in f:
                 if line.startswith("File: "):
                     current_file = line.replace("File: ", "").strip()
@@ -23,7 +25,6 @@ def parse_codebert_summary(report_path):
                     summaries.append({"file": current_file, "summary": summary})
     except Exception as e:
         print(f"Error: Failed to parse {summary_path}: {str(e)}")
-        return []
     return summaries
 
 def parse_sonar_report(report_path):
@@ -38,6 +39,8 @@ def parse_sonar_report(report_path):
     except Exception as e:
         print(f"Error: Failed to parse {sonar_path}: {str(e)}")
         return []
+
+# -------------------- Context & Prompt Builders --------------------
 
 def truncate_text(text, max_chars=1000):
     return text if len(text) <= max_chars else text[:max_chars] + "... [truncated]"
@@ -54,7 +57,12 @@ def build_context(summaries, sonar_issues, industry, entity_name):
 def build_prompt(context, industry, entity_name):
     return f"""
 You are a software modernization expert. Based on the following code analysis and SonarQube issues, identify modernization gaps for a {industry} application managing {entity_name} entities. Focus on modernizing legacy projects. 
-"List modernization gaps in the following format:\n\nGap: <description>\nRecommendation: <action>\n\nOnly return the list of gaps."
+List modernization gaps in the following format:
+
+Gap: <description>
+Recommendation: <action>
+
+Only return the list of gaps.
 
 Example Gaps:
 - Gap: Servlet-based architecture detected. Recommendation: Migrate to Spring Boot REST APIs.
@@ -68,6 +76,8 @@ Context:
 
 Provide a list of modernization gaps and recommendations.
 """
+
+# -------------------- Gap Extraction & Generation --------------------
 
 def extract_gaps_from_response(result_text):
     return re.findall(r"(?i)(?:-\s*)?Gap:.*Recommendation:.*(?=\n|$)", result_text)
@@ -85,10 +95,11 @@ def call_azure_openai_model(client, deployment, prompt, max_attempts=3):
                 temperature=0.7
             )
             result_text = response.choices[0].message.content.strip()
+            print("Raw response from Azure OpenAI:{result_text}...")  # Log first 100 chars for debugging
             gaps = extract_gaps_from_response(result_text)
             if gaps:
                 return gaps
-            print(f"Warning: No valid gaps extracted from Azure OpenAI output.")
+            print("Warning: No valid gaps extracted from Azure OpenAI output.")
             time.sleep(2 ** attempt)
         except Exception as e:
             print(f"Error: Azure OpenAI error (attempt {attempt + 1}): {str(e)}")
@@ -98,14 +109,14 @@ def call_azure_openai_model(client, deployment, prompt, max_attempts=3):
             break
     return None
 
-def generate_gaps_from_model(summaries, sonar_issues, source_dir="PolicyManagementJSP/src/main/java", entity_name="Policy", industry="Insurance"):
+def generate_gaps_from_model(summaries, sonar_issues, source_dir, entity_name, industry):
     endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
     key = os.environ.get("AZURE_OPENAI_KEY")
     deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT")
 
     if not endpoint or not key or not deployment:
         print("Error: One or more Azure OpenAI environment variables are not set. Using fallback.")
-        return generate_fallback_gaps(summaries, sonar_issues, source_dir)
+        return None
 
     try:
         client = AzureOpenAI(
@@ -115,25 +126,27 @@ def generate_gaps_from_model(summaries, sonar_issues, source_dir="PolicyManageme
         )
     except Exception as e:
         print(f"Error: Failed to initialize Azure OpenAI client: {str(e)}")
-        return generate_fallback_gaps(summaries, sonar_issues, source_dir)
+        return None
 
     context = build_context(summaries, sonar_issues, industry, entity_name)
     prompt = build_prompt(context, industry, entity_name)
     return call_azure_openai_model(client, deployment, prompt)
 
-def generate_fallback_gaps(summaries, sonar_issues, source_dir="PolicyManagementJSP/src/main/java"):
+def generate_fallback_gaps(summaries, sonar_issues, source_dir):
     gaps = []
     for summary in summaries:
-        if "servlet" in summary["summary"].lower():
-            gaps.append(f"Gap: {summary['file']} uses legacy servlet architecture. Recommendation: Migrate to Spring Boot REST APIs.")
-        if "dependency injection" in summary["summary"].lower():
-            gaps.append(f"Gap: {summary['file']} lacks dependency injection. Recommendation: Adopt Spring Framework for DI.")
-        if "jsp" in summary["summary"].lower():
-            gaps.append(f"Gap: {summary['file']} uses JSP for rendering. Recommendation: Migrate to modern frontend framework like React or Angular.")
-        if "jdbc" in summary["summary"].lower():
-            gaps.append(f"Gap: {summary['file']} uses raw JDBC. Recommendation: Adopt Spring Data JPA with Neon for modern ORM.")
-        if "logging" in summary["summary"].lower():
-            gaps.append(f"Gap: {summary['file']} uses outdated logging. Recommendation: Adopt SLF4J with Logback.")
+        s = summary["summary"].lower()
+        f = summary["file"]
+        if "servlet" in s:
+            gaps.append(f"Gap: {f} uses legacy servlet architecture. Recommendation: Migrate to Spring Boot REST APIs.")
+        if "dependency injection" in s:
+            gaps.append(f"Gap: {f} lacks dependency injection. Recommendation: Adopt Spring Framework for DI.")
+        if "jsp" in s:
+            gaps.append(f"Gap: {f} uses JSP for rendering. Recommendation: Migrate to modern frontend framework like React or Angular.")
+        if "jdbc" in s:
+            gaps.append(f"Gap: {f} uses raw JDBC. Recommendation: Adopt Spring Data JPA with Neon for modern ORM.")
+        if "logging" in s:
+            gaps.append(f"Gap: {f} uses outdated logging. Recommendation: Adopt SLF4J with Logback.")
     for issue in sonar_issues:
         if issue.get("type") == "CODE_SMELL":
             gaps.append(f"Gap: Code smell in {issue.get('component', 'unknown')}: {issue.get('message', 'No message')}. Recommendation: Refactor code.")
@@ -164,13 +177,15 @@ def generate_fallback_gaps(summaries, sonar_issues, source_dir="PolicyManagement
         gaps.append("Gap: No modernization gaps identified due to missing analysis data. Recommendation: Ensure codebert_summary.py and SonarQube analysis complete successfully.")
     return gaps
 
-def generate_gaps(reports_dir, output_path, entity_name="Policy", industry="Insurance"):
+# -------------------- Main Orchestration --------------------
+
+def generate_gaps(reports_dir, output_path, entity_name="Policy", industry="Insurance", source_dir="PolicyManagementJSP/src/main/java"):
     codebert_summaries = parse_codebert_summary(reports_dir)
     sonar_issues = parse_sonar_report(reports_dir)
-    gaps = generate_gaps_from_model(codebert_summaries, sonar_issues, source_dir="PolicyManagementJSP/src/main/java", entity_name=entity_name, industry=industry)
+    gaps = generate_gaps_from_model(codebert_summaries, sonar_issues, source_dir, entity_name, industry)
     if not gaps:
-        print("Warning: No gaps generated, forcing fallback.")
-        gaps = generate_fallback_gaps(codebert_summaries, sonar_issues, source_dir="PolicyManagementJSP/src/main/java")
+        print("Warning: No gaps generated from model, using fallback.")
+        gaps = generate_fallback_gaps(codebert_summaries, sonar_issues, source_dir)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     try:
         with open(output_path, "w", encoding="utf-8") as f:
@@ -182,31 +197,20 @@ def generate_gaps(reports_dir, output_path, entity_name="Policy", industry="Insu
         print(f"Error: Failed to write to {output_path}: {str(e)}")
         raise
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--analysis-reports", required=True, help="Directory containing analysis reports")
     parser.add_argument("--output", required=True, help="Output path for gaps.md")
     parser.add_argument("--entity-name", default="Policy", help="Entity name (e.g., Policy)")
     parser.add_argument("--industry", default="Insurance", help="Industry (e.g., Insurance)")
     args = parser.parse_args()
-    generate_gaps(args.analysis_reports, args.output, args.entity_name, args.industry)
+    generate_gaps(
+        reports_dir=args.analysis_reports,
+        output_path=args.output,
+        entity_name=args.entity_name,
+        industry=args.industry,
+        source_dir="PolicyManagementJSP/src/main/java"
+    )
 
-    # Example configuration for local execution:
-    #
-    # 1. Ensure you have the required Python packages installed:
-    #    pip install openai
-    #
-    # 2. Set the following environment variables in your shell:
-    #    export AZURE_OPENAI_ENDPOINT="https://<your-endpoint>.openai.azure.com/"
-    #    export AZURE_OPENAI_KEY="<your-azure-openai-key>"
-    #    export AZURE_OPENAI_DEPLOYMENT="<your-deployment-name>"
-    #
-    # 3. Run the script with:
-    #    python /Users/dileep.mettu/Documents/GitHub/Modernize-Different-OpenSource/scripts/generate_gaps.py \
-    #      --analysis-reports <path-to-analysis-reports> \
-    #      --output <output-path-for-gaps.md> \
-    #      --entity-name <EntityName> \
-    #      --industry <Industry>
-    #
-    # Example:
-    #    python scripts/generate_gaps.py --analysis-reports ./reports --output ./gaps.md --entity-name Policy --industry Insurance
+if __name__ == "__main__":
+    main()
