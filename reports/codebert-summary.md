@@ -3,47 +3,36 @@
 File: java/com/example/PolicyManagementJSP/LegacyServlet.java
 Summary: This Java code defines a servlet named `LegacyServlet` that handles requests related to legacy policy management. The servlet establishes a connection to a PostgreSQL database upon initialization and provides functionality to display a legacy policy management page and generate a policy report based on user input.
 
-The servlet listens for requests on the `/legacy` URL pattern. When a GET request is received, it checks the `action` parameter to determine whether to show the legacy page or generate a report. The `showLegacyPage` method renders an HTML form for users to input start and end dates for the report. The `generateReport` method processes the user input, executes a SQL query to retrieve policy data within the specified date range, and displays the results in an HTML table.
-
-Architecturally, the code demonstrates the use of JDBC for database connectivity and servlets for handling web requests. However, there are several architectural and security concerns to address:
-
-1. **Database Connection**: Storing database credentials (`DB_URL`, `DB_USER`, `DB_PASSWORD`) directly in the code is not recommended for security reasons. Consider using environment variables or a secure configuration mechanism to manage sensitive information.
-
-2. **SQL Injection**: The SQL query in the `generateReport` method is constructed using string concatenation, which can lead to SQL injection vulnerabilities. Prefer using parameterized queries to mitigate this risk.
-
-3. **Exception Handling**: The exception handling in the code is minimal and could be improved to provide better error messages and logging for troubleshooting purposes.
-
-4. **HTML Generation**: Generating HTML content within Java code can lead to maintenance issues and poor separation of concerns. Consider using a template engine or front-end framework for cleaner presentation logic.
-
-5. **Resource Management**: Ensure proper resource management, such as closing database connections in the `destroy` method to prevent resource leaks.
-
-Overall, the code provides basic functionality for interacting with a legacy policy management system but requires enhancements to improve security, maintainability, and robustness.
-
-File: java/com/example/PolicyManagementJSP/PolicyServlet.java
-Summary: This Java code defines a servlet named `PolicyServlet` that handles HTTP requests related to policies. The servlet establishes a connection to a PostgreSQL database, retrieves policies from the database based on user actions (e.g., listing policies or viewing a specific policy), and forwards the data to JSP pages for rendering.
-
-Key points:
-1. The servlet initializes a database connection in the `init()` method and closes the connection in the `destroy()` method.
-2. It handles different actions (e.g., list, view) based on user input and interacts with the database to fetch policy data.
-3. The servlet uses JSP pages for presenting policy information to users.
+The servlet listens for requests at the `/legacy` endpoint and determines the action based on the `action` parameter in the request. If the action is to generate a report, it fetches policy data from the database within a specified date range and displays it in an HTML table format. If the action is not specified or invalid, it displays a form for generating the report.
 
 Architectural concerns:
-- The servlet directly interacts with the database, which may not follow the best practice of separating concerns (consider using a data access layer).
-- Error handling is limited to printing stack traces, which may not provide adequate feedback to users or developers.
-- The servlet's logic for handling different actions could be extracted into separate methods for better readability and maintainability.
+1. The servlet directly interacts with the database using JDBC, which can lead to tight coupling and potential maintenance issues in the future. Consider using a data access layer or ORM framework for better separation of concerns.
+2. The servlet mixes presentation logic with business logic by generating HTML responses within the servlet methods. Separating concerns by using a templating engine or MVC framework would improve maintainability.
 
 Security concerns:
-- Hardcoded database credentials (`"admin", "password"`) are visible in the code, posing a security risk. Consider using a more secure method for storing and retrieving credentials.
-- The code does not implement input validation or sanitization, making it vulnerable to SQL injection attacks. Sanitize user inputs before using them in SQL queries.
+1. The code includes database credentials (`DB_URL`, `DB_USER`, `DB_PASSWORD`) in plain text, which is a security risk. Consider using environment variables or a secure configuration mechanism to store sensitive information.
+2. The servlet constructs SQL queries using user input without proper validation or sanitization, making it vulnerable to SQL injection attacks. Use prepared statements or an ORM framework to mitigate this risk.
+3. Error handling in the code is limited to printing stack traces and messages to the console. Consider implementing proper error handling and logging mechanisms to handle exceptions gracefully and securely.
 
-Overall, the code implements a basic servlet for managing policies but could benefit from architectural improvements and security enhancements.
+Overall, the code provides basic functionality for legacy policy management but could benefit from architectural improvements and security enhancements to ensure robustness and maintainability.
+
+File: java/com/example/PolicyManagementJSP/PolicyServlet.java
+Summary: This Java code defines a servlet named `PolicyServlet` that handles HTTP requests related to policies. The servlet establishes a connection to a PostgreSQL database on initialization and provides functionality to list policies, view individual policies, and handle database errors.
+
+The servlet uses JDBC to interact with the database, executing queries to retrieve policy information. It includes methods to fetch a list of policies and retrieve a specific policy by ID. The retrieved policy data is then set as attributes in the request for rendering in JSP views.
+
+Architecturally, the code follows the standard servlet structure with `doGet` method handling HTTP GET requests and `init` and `destroy` methods for initialization and cleanup, respectively. The servlet is mapped to the `/policy` URL pattern using the `@WebServlet` annotation.
+
+Security concerns in this code include storing database credentials (`admin` and `password`) directly in the source code, which is not recommended for production applications. It is advisable to use secure methods for managing sensitive information, such as environment variables or a configuration file. Additionally, the code should handle exceptions more gracefully, possibly by logging errors and providing appropriate error responses to clients.
+
+Overall, the code implements a basic policy management system using servlets and JDBC, but it could benefit from improvements in security practices and error handling mechanisms.
 
 File: java/com/example/PolicyManagementJSP/Policy.java
-Summary: This Java code defines a class named Policy that represents a policy entity with attributes such as id, policyNumber, customerName, startDate, and endDate. The class provides getter and setter methods for accessing and updating these attributes.
+Summary: This Java code defines a class named `Policy` in the `com.example.PolicyManagementJSP` package. The `Policy` class has private fields for storing an ID, policy number, customer name, start date, and end date. It also includes getter and setter methods for accessing and modifying these fields.
 
-The purpose of this class is to model and manage policy information within a Policy Management system, likely used in an application that deals with insurance policies or similar entities.
+The purpose of this class is to represent a policy entity, likely used in a policy management system. The class encapsulates the data related to a policy, allowing other parts of the system to interact with and manipulate policy information.
 
-From an architectural perspective, this code follows a standard Java bean pattern by encapsulating data fields and providing public accessors. However, there are no specific architectural concerns in this code snippet.
+From an architectural perspective, this code follows basic object-oriented principles by encapsulating data and providing access through getter and setter methods. However, there are no additional methods or behaviors defined in the class, which may limit its functionality.
 
-In terms of security concerns, it is important to note that handling sensitive information like policy details may require additional security measures such as data encryption, input validation, and access control mechanisms to prevent unauthorized access or data breaches. Additionally, when interacting with databases, proper handling of SQL queries and input sanitization should be considered to prevent SQL injection attacks.
+In terms of security concerns, the code does not include any explicit security features. Depending on the overall system requirements, additional security measures such as input validation, access control, or encryption may need to be implemented to protect sensitive policy data. Additionally, handling of sensitive information like dates and customer names should be done carefully to prevent data breaches or unauthorized access.
 
