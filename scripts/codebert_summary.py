@@ -56,38 +56,38 @@ def generate_summary(code, file_name):
     openai.api_version = "2023-07-01"
     openai.api_key = api_key
 
-prompt = (
-    "You are a software architect. Summarize the following Java code in plain English, "
-    "highlighting its purpose and any architectural or security concerns:\n\n"
-    f"{truncate_text(code)}"
-)
+    prompt = (
+        "You are a software architect. Summarize the following Java code in plain English, "
+        "highlighting its purpose and any architectural or security concerns:\n\n"
+        f"{truncate_text(code)}"
+    )
 
-client = AzureOpenAI(
-    api_key=api_key,
-    azure_endpoint=endpoint,
-    api_version="2023-07-01"
-)
+    client = AzureOpenAI(
+        api_key=api_key,
+        azure_endpoint=endpoint,
+        api_version="2023-07-01"
+    )
 
-for attempt in range(3):
-    try:
-        response = client.chat.completions.create(
-            model=deployment,
-            messages=[
-                {"role": "system", "content": "You are a software architect who summarizes Java code."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3,
-            max_tokens=512
-        )
-        summary = response.choices[0].message.content.strip()
-        logger.info(f"Generated summary for {file_name}: {summary[:50]}...")
-        return summary
-    except Exception as e:
-        logger.error(f"Azure OpenAI error for {file_name} (attempt {attempt + 1}): {str(e)}")
-        time.sleep(2 ** attempt)
+    for attempt in range(3):
+        try:
+            response = client.chat.completions.create(
+                model=deployment,
+                messages=[
+                    {"role": "system", "content": "You are a software architect who summarizes Java code."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=512
+            )
+            summary = response.choices[0].message.content.strip()
+            logger.info(f"Generated summary for {file_name}: {summary[:50]}...")
+            return summary
+        except Exception as e:
+            logger.error(f"Azure OpenAI error for {file_name} (attempt {attempt + 1}): {str(e)}")
+            time.sleep(2 ** attempt)
 
-logger.warning(f"Azure OpenAI failed for {file_name}, using fallback")
-return generate_fallback_summary(code, file_name)
+    logger.warning(f"Azure OpenAI failed for {file_name}, using fallback")
+    return generate_fallback_summary(code, file_name)
 
 def generate_fallback_summary(code, file_name):
     """Generate a basic summary using rule-based logic."""
