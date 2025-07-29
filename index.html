@@ -45,46 +45,60 @@
 <body>  
 <h1>Markdown Journey</h1>  
 <ul id="fileList"></ul>  
-<div id="content"></div>
-<script src="marked.min.js"></script> 
+<div id="content"></div>  
 <script>  
-  const fileList = document.getElementById('fileList');  
-  const content = document.getElementById('content');  
-  let currentIndex = 0;  
-  let files = [];  
+function initializeMarkdownViewer() {  
+    if (typeof marked === 'function') {  
+        const fileList = document.getElementById('fileList');  
+        const content = document.getElementById('content');  
+        let currentIndex = 0;  
+        let files = [];  
   
-  fetch('files.json')  
-    .then(response => response.json())  
-    .then(data => {  
-      files = data;  
-      showFile(currentIndex);  
-    });  
+        fetch('files.json')  
+            .then(response => response.json())  
+            .then(data => {  
+                files = data;  
+                showFile(currentIndex);  
+            });  
   
-  function showFile(index) {  
-    const file = files[index];  
-    fetch(file.path)  
-      .then(response => response.text())  
-      .then(markdown => {  
-        content.innerHTML = marked(markdown);  
-      });  
-  }  
+        function showFile(index) {  
+            const file = files[index];  
+            fetch(file.path)  
+                .then(response => response.text())  
+                .then(markdown => {  
+                    content.innerHTML = marked(markdown);  
+                });  
+        }  
   
-  fileList.addEventListener('click', (event) => {  
-    if (event.target.tagName === 'LI') {  
-      currentIndex = Array.from(fileList.children).indexOf(event.target);  
-      showFile(currentIndex);  
+        fileList.addEventListener('click', (event) => {  
+            if (event.target.tagName === 'LI') {  
+                currentIndex = Array.from(fileList.children).indexOf(event.target);  
+                showFile(currentIndex);  
+            }  
+        });  
+  
+        document.addEventListener('keydown', (event) => {  
+            if (event.key === 'ArrowRight' && currentIndex < files.length - 1) {  
+                currentIndex++;  
+                showFile(currentIndex);  
+            } else if (event.key === 'ArrowLeft' && currentIndex > 0) {  
+                currentIndex--;  
+                showFile(currentIndex);  
+            }  
+        });  
+    } else {  
+        console.error('marked library not loaded');  
     }  
-  });  
+}  
   
-  document.addEventListener('keydown', (event) => {  
-    if (event.key === 'ArrowRight' && currentIndex < files.length - 1) {  
-      currentIndex++;  
-      showFile(currentIndex);  
-    } else if (event.key === 'ArrowLeft' && currentIndex > 0) {  
-      currentIndex--;  
-      showFile(currentIndex);  
-    }  
-  });  
-</script>   
+function loadScript(src, callback) {  
+    let script = document.createElement('script');  
+    script.src = src;  
+    script.onload = callback;  
+    document.head.appendChild(script);  
+}  
+  
+loadScript('https://cdn.jsdelivr.net/npm/marked/marked.min.js', initializeMarkdownViewer);  
+</script>  
 </body>  
 </html>  
