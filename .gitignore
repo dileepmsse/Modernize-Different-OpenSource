@@ -64,3 +64,4 @@ __pycache__/
 *.hypothesis/
 # Additional coverage files
 *.coverage.*
+PolicyManagementJSP/src/main/java/.DS_Store
