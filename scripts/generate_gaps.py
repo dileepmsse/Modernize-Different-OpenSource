@@ -42,7 +42,7 @@ def parse_sonar_report(report_path):
 
 # -------------------- Context & Prompt Builders --------------------
 
-def truncate_text(text, max_chars=1000):
+def truncate_text(text, max_chars=4000):
     return text if len(text) <= max_chars else text[:max_chars] + "... [truncated]"
 
 def build_context(summaries, sonar_issues, industry, entity_name):
@@ -52,13 +52,14 @@ def build_context(summaries, sonar_issues, industry, entity_name):
     context += "SonarQube Issues:\n"
     for issue in sonar_issues:
         context += f"Component: {issue.get('component', 'unknown')}, Type: {issue.get('type', 'unknown')}, Message: {issue.get('message', 'No message')}\n"
-    return truncate_text(context, max_chars=1000)
+    return truncate_text(context)
 
 def build_prompt(context, industry, entity_name):
-    return f"""
-You are a software modernization expert. Based on the following code analysis and SonarQube issues, identify modernization gaps for a {industry} application managing {entity_name} entities. Focus on modernizing legacy projects. 
-List modernization gaps in the following format:
+    return f"""You are a software modernization expert. Based on the following code analysis and SonarQube issues, identify modernization gaps for a {industry} application managing {entity_name} entities.
 
+Focus on modernizing legacy Java servlets, JSP, JDBC, and outdated libraries.
+
+List modernization gaps in the following format:
 Gap: <description>
 Recommendation: <action>
 
@@ -73,14 +74,13 @@ Example Gaps:
 
 Context:
 {context}
-
-Provide a list of modernization gaps and recommendations.
 """
 
 # -------------------- Gap Extraction & Generation --------------------
 
 def extract_gaps_from_response(result_text):
-    return re.findall(r"(?i)(?:-\s*)?Gap:.*Recommendation:.*(?=\n|$)", result_text)
+    pattern = r"(?:-?\s*Gap:.*?Recommendation:.*?)(?=\n|$)"
+    return re.findall(pattern, result_text, re.IGNORECASE | re.DOTALL)
 
 def call_azure_openai_model(client, deployment, prompt, max_attempts=3):
     for attempt in range(max_attempts):
@@ -91,11 +91,11 @@ def call_azure_openai_model(client, deployment, prompt, max_attempts=3):
                     {"role": "system", "content": "You are a software modernization expert."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=500,
+                max_tokens=800,
                 temperature=0.7
             )
             result_text = response.choices[0].message.content.strip()
-            print("Raw response from Azure OpenAI:{response.choices[0]}")  # Log first 100 chars for debugging
+            print("Raw response from Azure OpenAI:\n", result_text)
             gaps = extract_gaps_from_response(result_text)
             if gaps:
                 return gaps
@@ -121,7 +121,7 @@ def generate_gaps_from_model(summaries, sonar_issues, source_dir, entity_name, i
     try:
         client = AzureOpenAI(
             api_key=key,
-            api_version="2024-12-01-preview",
+            api_version="2024-12-01-preview",  # Use the latest version
             azure_endpoint=endpoint
         )
     except Exception as e:
@@ -174,7 +174,7 @@ def generate_fallback_gaps(summaries, sonar_issues, source_dir):
         except Exception as e:
             print(f"Error: Failed to walk source directory {source_dir}: {str(e)}")
     if not gaps:
-        gaps.append("Gap: No modernization gaps identified due to missing analysis data. Recommendation: Ensure codebert_summary.py and SonarQube analysis complete successfully.")
+        gaps.append("Gap: No modernization gaps identified due to missing analysis data. Recommendation: Ensure codebert_summary.md and SonarQube analysis are available.")
     return gaps
 
 # -------------------- Main Orchestration --------------------
@@ -214,3 +214,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
