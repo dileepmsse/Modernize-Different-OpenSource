@@ -54,6 +54,7 @@ def generate_requirements(source_path, entity_name, industry, output_path):
 
     requirements = []
     for root, _, files in os.walk(source_path):
+        print("Found Files count\n", files.count)
         for file in files:
             # Support multiple code file formats
             supported_extensions = [".java", ".cs", ".py", ".js", ".ts"]
