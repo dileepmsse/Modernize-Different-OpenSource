@@ -95,7 +95,7 @@ def call_azure_openai_model(client, deployment, prompt, max_attempts=3):
                 temperature=0.7
             )
             result_text = response.choices[0].message.content.strip()
-            print("Raw response from Azure OpenAI:{result_text}...")  # Log first 100 chars for debugging
+            print("Raw response from Azure OpenAI:{result_text[100]}")  # Log first 100 chars for debugging
             gaps = extract_gaps_from_response(result_text)
             if gaps:
                 return gaps
