@@ -1,0 +1,22 @@
+[  
+  {  
+    "name": "Inventory",  
+    "path": "docs/inventory.md"  
+  },  
+  {  
+    "name": "Requirements",  
+    "path": "docs/requirements.md"  
+  },  
+  {  
+    "name": "Gaps",  
+    "path": "docs/gaps.md"  
+  },
+  {  
+    "name": "Full Summary",  
+    "path": "reports/code_summary.json"  
+  },
+  {  
+    "name": "Checkstyle Report",  
+    "path": "reports/checkstyle-report.xml"  
+  }  
+]  

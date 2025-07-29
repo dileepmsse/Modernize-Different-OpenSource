@@ -1,0 +1,90 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>Markdown Journey</title>  
+<style>  
+  body {  
+    font-family: Arial, sans-serif;  
+    margin: 0;  
+    padding: 0;  
+    background-color: #f9f9f9;  
+    text-align: center;  
+  }  
+  h1 {  
+    margin-top: 20px;  
+    font-size: 24px;  
+    color: #333;  
+  }  
+  ul {  
+    list-style-type: none;  
+    padding: 0;  
+  }  
+  li {  
+    display: inline-block;  
+    margin: 10px;  
+    cursor: pointer;  
+    padding: 10px 20px;  
+    background-color: #fff;  
+    border: 1px solid #ccc;  
+    border-radius: 5px;  
+  }  
+  #content {  
+    margin-top: 20px;  
+    padding: 20px;  
+    background-color: #fff;  
+    border: 1px solid #ccc;  
+    border-radius: 5px;  
+    max-width: 800px;  
+    margin: 0 auto;  
+    text-align: left;  
+  }  
+</style>  
+</head>  
+<body>  
+<h1>Markdown Journey</h1>  
+<ul id="fileList"></ul>  
+<div id="content"></div>  
+<script>  
+  const fileList = document.getElementById('fileList');  
+  const content = document.getElementById('content');  
+  let currentIndex = 0;  
+  let files = [];  
+  
+  fetch('files.json')  
+    .then(response => response.json())  
+    .then(data => {  
+      files = data;  
+      showFile(currentIndex);  
+    });  
+  
+  function showFile(index) {  
+    const file = files[index];  
+    fetch(file.path)  
+      .then(response => response.text())  
+      .then(markdown => {  
+        content.innerHTML = marked(markdown);  
+      });  
+  }  
+  
+  fileList.addEventListener('click', (event) => {  
+    if (event.target.tagName === 'LI') {  
+      currentIndex = Array.from(fileList.children).indexOf(event.target);  
+      showFile(currentIndex);  
+    }  
+  });  
+  
+  document.addEventListener('keydown', (event) => {  
+    if (event.key === 'ArrowRight' && currentIndex < files.length - 1) {  
+      currentIndex++;  
+      showFile(currentIndex);  
+    } else if (event.key === 'ArrowLeft' && currentIndex > 0) {  
+      currentIndex--;  
+      showFile(currentIndex);  
+    }  
+  });  
+</script>  
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>  
+</body>  
+</html>  

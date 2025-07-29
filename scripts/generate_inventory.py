@@ -88,4 +88,22 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # Example launch.json for VS Code debugging
+    # Save this as .vscode/launch.json in your project root
 
+    # {
+    #     "version": "0.2.0",
+    #     "configurations": [
+    #         {
+    #             "name": "Python: Generate Inventory",
+    #             "type": "python",
+    #             "request": "launch",
+    #             "program": "${workspaceFolder}/scripts/generate_inventory.py",
+    #             "args": [
+    #                 "--source", "${workspaceFolder}/path/to/source",
+    #                 "--output", "${workspaceFolder}/output/inventory.md"
+    #             ],
+    #             "console": "integratedTerminal"
+    #         }
+    #     ]
+    # }
