@@ -53,7 +53,7 @@ def generate_summary(code, file_name):
 
     openai.api_type = "azure"
     openai.api_base = endpoint
-    openai.api_version = "2023-07-01"
+    openai.api_version = "2024-12-01-preview"
     openai.api_key = api_key
 
     prompt = (

@@ -2,12 +2,10 @@ import argparse
 import os
 from pathlib import Path
 import json
-import re
-from openai import OpenAI
 import time
+from openai import AzureOpenAI
 
 def parse_codebert_summary(report_path):
-    """Parse human-readable summaries from codebert-summary.md."""
     summary_path = Path(report_path) / "codebert-summary.md"
     if not summary_path.exists():
         print(f"Warning: {summary_path} not found, relying on fallback.")
@@ -28,7 +26,6 @@ def parse_codebert_summary(report_path):
     return summaries
 
 def parse_sonar_report(report_path):
-    """Parse SonarQube issues."""
     sonar_path = Path(report_path) / "sonar-report.json"
     if not sonar_path.exists():
         print(f"Warning: {sonar_path} not found, relying on fallback.")
@@ -42,13 +39,9 @@ def parse_sonar_report(report_path):
         return []
 
 def truncate_text(text, max_chars=1000):
-    """Truncate text to fit model token limit."""
-    if len(text) <= max_chars:
-        return text
-    return text[:max_chars] + "... [truncated]"
+    return text if len(text) <= max_chars else text[:max_chars] + "... [truncated]"
 
 def build_context(summaries, sonar_issues, industry, entity_name):
-    """Build context string for model prompt."""
     context = f"Industry: {industry}\nEntity: {entity_name}\n\nCode Analysis:\n"
     for summary in summaries:
         context += f"File: {summary['file']}\nSummary: {summary['summary']}\n\n"
@@ -58,7 +51,6 @@ def build_context(summaries, sonar_issues, industry, entity_name):
     return truncate_text(context, max_chars=1000)
 
 def build_prompt(context, industry, entity_name):
-    """Build prompt for gap analysis."""
     return f"""
 You are a software modernization expert. Based on the following code analysis and SonarQube issues, identify modernization gaps for a {industry} application managing {entity_name} entities. Focus on modernizing legacy Java servlets, JSP, database access (using Neon), and outdated libraries. Output gaps in the format: "Gap: <description>. Recommendation: <action>."
 
@@ -76,15 +68,13 @@ Provide a list of modernization gaps and recommendations.
 """
 
 def extract_gaps_from_response(result_text):
-    """Extract gaps from model response text."""
     return [line.strip() for line in result_text.split("\n") if line.strip().startswith("Gap:")]
 
-def call_huggingface_model(client, model, prompt, max_attempts=3):
-    """Call Hugging Face model and return gaps or None."""
+def call_azure_openai_model(client, deployment, prompt, max_attempts=3):
     for attempt in range(max_attempts):
         try:
             response = client.chat.completions.create(
-                model=model,
+                model=deployment,
                 messages=[
                     {"role": "system", "content": "You are a software modernization expert."},
                     {"role": "user", "content": prompt}
@@ -96,50 +86,41 @@ def call_huggingface_model(client, model, prompt, max_attempts=3):
             gaps = extract_gaps_from_response(result_text)
             if gaps:
                 return gaps
-            print(f"Warning: No valid gaps extracted from {model} output.")
+            print(f"Warning: No valid gaps extracted from Azure OpenAI output.")
             time.sleep(2 ** attempt)
         except Exception as e:
-            error_msg = f"Error: Exception in {model} inference (attempt {attempt + 1}): {str(e)}"
-            print(error_msg)
+            print(f"Error: Azure OpenAI error (attempt {attempt + 1}): {str(e)}")
             if "rate limit" in str(e).lower() or "429" in str(e):
                 time.sleep(2 ** attempt)
                 continue
             break
     return None
 
-def generate_gaps_from_model(summaries, sonar_issues, token, source_dir="PolicyManagementJSP/src/main/java", entity_name="Policy", industry="Insurance"):
-    """Generate modernization gaps using Hugging Face Router API."""
-    # Validate OpenAI client compatibility with Hugging Face router API
+def generate_gaps_from_model(summaries, sonar_issues, source_dir="PolicyManagementJSP/src/main/java", entity_name="Policy", industry="Insurance"):
+    endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
+    key = os.environ.get("AZURE_OPENAI_KEY")
+    deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT")
+
+    if not endpoint or not key or not deployment:
+        print("Error: One or more Azure OpenAI environment variables are not set. Using fallback.")
+        return generate_fallback_gaps(summaries, sonar_issues, source_dir)
+
     try:
-        client = OpenAI(
-            api_key=token,
-            base_url="https://api.endpoints.huggingface.cloud/v1"
+        client = AzureOpenAI(
+            api_key=key,
+            api_version="2024-12-01-preview",
+            azure_endpoint=endpoint
         )
     except Exception as e:
-        print(f"Error: Failed to initialize Hugging Face API client: {str(e)}")
+        print(f"Error: Failed to initialize Azure OpenAI client: {str(e)}")
         return generate_fallback_gaps(summaries, sonar_issues, source_dir)
 
     context = build_context(summaries, sonar_issues, industry, entity_name)
     prompt = build_prompt(context, industry, entity_name)
-
-    # Use endpoints compatible with Hugging Face Inference Endpoints
-    model_endpoints = [
-        "mistralai/Mistral-7B-Instruct-v0.2",
-        "mistralai/Mixtral-8x7B-Instruct-v0.1"
-    ]
-
-    for model in model_endpoints:
-        gaps = call_huggingface_model(client, model, prompt)
-        if gaps:
-            return gaps
-
-    print("Warning: All model inferences failed, using fallback.")
-    return generate_fallback_gaps(summaries, sonar_issues, source_dir)
+    return call_azure_openai_model(client, deployment, prompt)
 
 def generate_fallback_gaps(summaries, sonar_issues, source_dir="PolicyManagementJSP/src/main/java"):
-    """Generate gaps using rule-based logic as a fallback."""
     gaps = []
-    # Parse summaries if available
     for summary in summaries:
         if "servlet" in summary["summary"].lower():
             gaps.append(f"Gap: {summary['file']} uses legacy servlet architecture. Recommendation: Migrate to Spring Boot REST APIs.")
@@ -151,13 +132,9 @@ def generate_fallback_gaps(summaries, sonar_issues, source_dir="PolicyManagement
             gaps.append(f"Gap: {summary['file']} uses raw JDBC. Recommendation: Adopt Spring Data JPA with Neon for modern ORM.")
         if "logging" in summary["summary"].lower():
             gaps.append(f"Gap: {summary['file']} uses outdated logging. Recommendation: Adopt SLF4J with Logback.")
-    
-    # Parse SonarQube issues
     for issue in sonar_issues:
         if issue.get("type") == "CODE_SMELL":
             gaps.append(f"Gap: Code smell in {issue.get('component', 'unknown')}: {issue.get('message', 'No message')}. Recommendation: Refactor code.")
-    
-    # If no summaries, parse raw source code
     if not summaries and os.path.exists(source_dir):
         try:
             for root, _, files in os.walk(source_dir):
@@ -181,29 +158,17 @@ def generate_fallback_gaps(summaries, sonar_issues, source_dir="PolicyManagement
                             print(f"Error: Failed to parse {file_path}: {str(e)}")
         except Exception as e:
             print(f"Error: Failed to walk source directory {source_dir}: {str(e)}")
-    
     if not gaps:
         gaps.append("Gap: No modernization gaps identified due to missing analysis data. Recommendation: Ensure codebert_summary.py and SonarQube analysis complete successfully.")
-    
     return gaps
 
 def generate_gaps(reports_dir, output_path, entity_name="Policy", industry="Insurance"):
-    """Generate modernization gaps using Router API with fallback."""
     codebert_summaries = parse_codebert_summary(reports_dir)
     sonar_issues = parse_sonar_report(reports_dir)
-    token = os.environ.get("HUGGINGFACE_TOKEN")
-    if not token:
-        print("Error: HUGGINGFACE_TOKEN environment variable not set, using fallback.")
-        gaps = generate_fallback_gaps(codebert_summaries, sonar_issues, source_dir="PolicyManagementJSP/src/main/java")
-    else:
-        gaps = generate_gaps_from_model(codebert_summaries, sonar_issues, token, source_dir="PolicyManagementJSP/src/main/java", entity_name=entity_name, industry=industry)
-    
-    # Ensure gaps are not empty
+    gaps = generate_gaps_from_model(codebert_summaries, sonar_issues, source_dir="PolicyManagementJSP/src/main/java", entity_name=entity_name, industry=industry)
     if not gaps:
         print("Warning: No gaps generated, forcing fallback.")
         gaps = generate_fallback_gaps(codebert_summaries, sonar_issues, source_dir="PolicyManagementJSP/src/main/java")
-    
-    # Write gaps to output
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     try:
         with open(output_path, "w", encoding="utf-8") as f:
@@ -223,3 +188,4 @@ if __name__ == "__main__":
     parser.add_argument("--industry", default="Insurance", help="Industry (e.g., Insurance)")
     args = parser.parse_args()
     generate_gaps(args.analysis_reports, args.output, args.entity_name, args.industry)
+
