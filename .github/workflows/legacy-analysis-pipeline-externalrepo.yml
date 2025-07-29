@@ -96,6 +96,13 @@ jobs:
             -Dsonar.sources=source-repo/PolicyManagementJSP/src/main/java
             -Dsonar.java.binaries=source-repo/PolicyManagementJSP/target/classes
 
+      - name: Download SonarQube report
+        run: |
+          mkdir -p reports
+          curl -sSf -u "${{ secrets.SONAR_TOKEN }}:" \
+            "${{ secrets.SONAR_HOST_URL }}/api/issues/search?componentKeys=dileepmsse_PolicyManagementJSPRepo" \
+            -o reports/sonar-report.json
+
       - name: Install Checkstyle
         run: |
           mvn checkstyle:checkstyle -Dcheckstyle.failOnViolation=false -f source-repo/PolicyManagementJSP/pom.xml 
@@ -190,7 +197,7 @@ jobs:
           AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
           AZURE_OPENAI_KEY: ${{ secrets.AZURE_OPENAI_KEY }}
           AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
-          
+
       - name: Commit documentation
         run: |
           git config user.name "GitHub Actions"
