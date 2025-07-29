@@ -13,10 +13,14 @@
   },
   {  
     "name": "Full Summary",  
-    "path": "reports/code_summary.json"  
+    "path": "reports/codebert-summary.md"  
   },
   {  
     "name": "Checkstyle Report",  
     "path": "reports/checkstyle-report.xml"  
-  }  
+  },
+  {  
+    "name": "SonarQube Report",  
+    "path": "reports/sonar-report.json"  
+  }   
 ]  
