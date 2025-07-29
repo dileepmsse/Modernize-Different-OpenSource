@@ -45,7 +45,8 @@
 <body>  
 <h1>Markdown Journey</h1>  
 <ul id="fileList"></ul>  
-<div id="content"></div>  
+<div id="content"></div>
+<script src="marked.min.js"></script> 
 <script>  
   const fileList = document.getElementById('fileList');  
   const content = document.getElementById('content');  
@@ -84,7 +85,6 @@
       showFile(currentIndex);  
     }  
   });  
-</script>  
-<script src="marked.min.js"></script>  
+</script>   
 </body>  
 </html>  
