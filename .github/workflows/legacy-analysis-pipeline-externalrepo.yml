@@ -206,6 +206,6 @@ jobs:
           git commit -m "Add analysis and requirements documentation" || echo "No changes to commit"
           git pull --rebase origin main || echo "No changes to pull"
           # Force push to avoid conflicts
-          git push origin main
+          git push origin main --force
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
